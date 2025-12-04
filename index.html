@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>War Server - MP3 Uploader (Frontend)</title>
-    <!-- Carga de Tailwind CSS para el estilo -->
+    <title>TWS Music Host Site</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carga de Firebase SDK para la base de datos (Firestore) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -29,7 +27,7 @@
         // Inicialización y Autenticación de Firebase
         const initFirebase = async () => {
             if (Object.keys(firebaseConfig).length === 0) {
-                 console.error("Firebase no está configurado. La funcionalidad de la base de datos no funcionará.");
+                 console.error("Firebase is not configured. Database functionality will not work.");
                  return;
             }
             try {
@@ -37,40 +35,34 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // Intento de autenticación con token o anónima
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                // Listener de estado de autenticación
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
-                        console.log("Usuario autenticado. UID:", userId);
-                        // Llamar a la función principal que necesita Firestore
+                        // console.log("User authenticated. UID:", userId); // Oculto para evitar registro en consola
                         window.setupApp(db, auth, userId, appId); 
                     } else {
-                        // Usar ID anónimo si no hay usuario (aunque signInAnonymously ya debería haber creado uno)
                         userId = crypto.randomUUID(); 
                         isAuthReady = true;
-                        window.setupApp(db, auth, userId, appId);
-                        console.log("Sesión anónima iniciada. ID generado:", userId);
+                        window.setupApp(null, null, userId, appId);
+                        // console.log("Anonymous session started. Generated ID:", userId); // Oculto para evitar registro en consola
                     }
                 });
 
             } catch (error) {
-                console.error("Error al inicializar o autenticar Firebase:", error);
-                // Si falla la autenticación, seguimos con un ID temporal
+                console.error("Error initializing or authenticating Firebase:", error);
                 userId = crypto.randomUUID(); 
                 isAuthReady = true;
                 window.setupApp(null, null, userId, appId);
             }
         };
 
-        // Exportar funciones y variables para el script principal
         window.initFirebase = initFirebase;
     </script>
     
@@ -78,22 +70,19 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0d1117; /* Fondo oscuro (Dark Mode) */
-            color: #c9d1d9; /* Texto claro */
+            background-color: #0d1117; 
+            color: #c9d1d9; 
         }
-        /* Estilos personalizados para la interfaz del cargador */
         .container-card {
-            background-color: #161b22; /* Color de tarjeta más oscuro */
+            background-color: #161b22; 
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
-        /* Estilo para reproductor de audio */
         .audio-player {
             width: 100%;
             height: 40px;
             background-color: #21262d;
-            border-radius: 9999px; /* rounded-full */
+            border-radius: 9999px; 
         }
-        /* Estilos para el input de archivo */
         input[type="file"]::-webkit-file-upload-button {
             cursor: pointer;
         }
@@ -101,10 +90,9 @@
 </head>
 <body class="min-h-screen flex flex-col" onload="window.initFirebase()">
 
-    <!-- Encabezado Fijo -->
     <header class="bg-[#1f262e] border-b border-[#30363d] py-3 px-6 shadow-lg">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-white">War Server</h1>
+            <h1 class="text-xl font-bold text-white">TWS Music Host Site</h1>
             <nav>
                 <a href="#home" id="nav-home" class="text-blue-400 hover:text-blue-300 font-semibold mr-4">Home</a>
                 <a href="#music-links" id="nav-links" class="text-gray-400 hover:text-white">Music Links</a>
@@ -112,31 +100,29 @@
         </div>
     </header>
 
-    <!-- Contenido Principal: Uploader (Home Tab) -->
     <main id="home" class="flex-grow flex items-center justify-center p-6">
         <div class="container-card w-full max-w-md p-8 rounded-xl">
-            <h2 class="text-2xl font-semibold mb-6 text-center text-white">MP3 Uploader for TWS RP</h2>
-            <p id="user-info" class="text-xs text-center text-gray-500 mb-4">
-                ID de Usuario: Cargando...
+            <h2 class="text-2xl font-semibold mb-6 text-center text-white">Upload your MP3s here</h2>
+            
+            <p id="user-info" class="text-xs text-center text-gray-500 mb-4 hidden">
+                User ID: Loading...
             </p>
-            <p class="text-sm text-center text-red-400 mb-6">
-                **Nota:** La subida se gestiona mediante Cloudinary. Máx. 40 MB.
+            
+            <p class="text-sm text-center text-red-400 mb-6 font-bold">
+                Note: Upload is handled by Cloudinary. Max. 40 MB.
             </p>
 
-            <!-- Formulario de Subida -->
             <form id="mp3-upload-form" class="space-y-6">
                 
-                <!-- Contraseña (Placeholder para simular seguridad) -->
                 <div>
-                    <label for="password" class="block text-sm font-medium mb-1">Contraseña</label>
-                    <input type="password" id="password" name="password" required
+                    <label for="password" class="block text-sm font-medium mb-1">Password (Authentication)</label>
+                    <input type="password" id="password" name="password" 
                            class="w-full px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
-                           placeholder="Ingresa la contraseña de acceso">
+                           placeholder="Enter access password">
                 </div>
 
-                <!-- Selección de Archivo MP3 -->
                 <div>
-                    <label for="mp3-file" class="block text-sm font-medium mb-1">Elige Archivo MP3</label>
+                    <label for="mp3-file" class="block text-sm font-medium mb-1">Choose MP3 File</label>
                     <input type="file" id="mp3-file" name="mp3-file" accept="audio/mp3, audio/mpeg" required
                            class="w-full text-sm text-gray-400
                            file:mr-4 file:py-2 file:px-4
@@ -146,66 +132,57 @@
                            hover:file:bg-blue-700">
                 </div>
 
-                <!-- Nombre Personalizado -->
                 <div>
-                    <label for="custom-name" class="block text-sm font-medium mb-1">Nombre Personalizado (Custom Name)</label>
+                    <label for="custom-name" class="block text-sm font-medium mb-1">Custom Name</label>
                     <input type="text" id="custom-name" name="custom-name" required
                            class="w-full px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
-                           placeholder="Ej: duty calls">
+                           placeholder="Ex: duty calls">
                 </div>
 
-                <!-- Botón de Subida -->
                 <button type="submit" id="upload-button"
                         class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition duration-200 shadow-md">
-                    Subir (Upload)
+                    Upload
                 </button>
             </form>
 
-            <!-- Área de Mensajes de Estado (Mejorada) -->
             <div id="status-message" class="mt-4 text-center text-sm font-medium hidden"></div>
 
-            <!-- NUEVO: Registro de Actividad/Errores (Persistent Log) -->
-            <div class="mt-6 pt-4 border-t border-[#30363d]">
-                <h3 class="text-sm font-semibold mb-2 text-gray-400">Registro de Actividad/Errores</h3>
+            <div class="mt-6 pt-4 border-t border-[#30363d] hidden">
+                <h3 class="text-sm font-semibold mb-2 text-gray-400">Activity/Error Log</h3>
                 <div id="activity-log" class="max-h-40 overflow-y-auto space-y-1 p-2 rounded-lg bg-[#21262d] text-xs flex flex-col-reverse">
-                    <p class="text-gray-500">Log de la aplicación iniciado.</p>
+                    <p class="text-gray-500">Application log initialized.</p>
                 </div>
             </div>
 
         </div>
     </main>
 
-    <!-- Sección de Enlaces de Música (Music Links Tab) -->
     <section id="music-links" class="hidden flex-grow flex justify-center p-6">
         <div class="container-card w-full max-w-4xl p-8 rounded-xl h-full flex flex-col">
             <h2 class="text-2xl font-semibold mb-6 text-center text-white">Uploaded Music Links</h2>
-            <p id="song-count" class="text-sm text-gray-500 mb-4 text-center">Total: Cargando...</p>
+            <p id="song-count" class="text-sm text-gray-500 mb-4 text-center">Total: Loading...</p>
             
             <div class="mb-6 flex flex-col sm:flex-row justify-between items-center">
-                <input type="text" id="search-input" placeholder="Buscar canción por nombre..."
+                <input type="text" id="search-input" placeholder="Search song by name..."
                        class="w-full sm:flex-grow px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] text-white placeholder-gray-500 mb-4 sm:mb-0 sm:mr-4">
                 <div class="flex space-x-4 text-sm whitespace-nowrap">
-                    <label><input type="radio" name="sort" value="alpha" id="sort-alpha" class="mr-1"> Alfabético</label>
-                    <label><input type="radio" name="sort" value="newest" id="sort-newest" checked class="mr-1"> Más nuevos</label>
-                    <label><input type="radio" name="sort" value="oldest" id="sort-oldest" class="mr-1"> Más viejos</label>
+                    <label><input type="radio" name="sort" value="alpha" id="sort-alpha" class="mr-1"> Alphabetical</label>
+                    <label><input type="radio" name="sort" value="newest" id="sort-newest" checked class="mr-1"> Newest</label>
+                    <label><input type="radio" name="sort" value="oldest" id="sort-oldest" class="mr-1"> Oldest</label>
                 </div>
             </div>
             
-            <!-- Contenedor donde se renderizará la lista real de música -->
             <div id="music-list" class="space-y-3 flex-grow overflow-y-auto pr-2">
-                <!-- Los elementos de la lista se inyectarán aquí por JavaScript -->
-                <p id="list-status" class="text-center text-gray-500">Cargando enlaces de música...</p>
+                <p id="list-status" class="text-center text-gray-500">Loading music links...</p>
             </div>
 
         </div>
     </section>
     
-    <!-- Pie de Página Fijo -->
     <footer class="bg-[#1f262e] border-t border-[#30363d] py-3 px-6 text-center text-xs text-gray-500">
         &copy; 2025 by Renton. All rights reserved.
     </footer>
 
-    <!-- Lógica de JavaScript principal para el manejo de la app -->
     <script>
         // Variables globales de Firebase (se poblarán en initFirebase)
         let dbInstance = null;
@@ -213,34 +190,29 @@
         let appId = null;
         let statusTimeout = null;
         
-        // Máximo de 40MB para archivos
         const MAX_FILE_SIZE = 40 * 1024 * 1024; 
 
-        // **CLOUDINARY CONFIGURATION** (Configurado con las credenciales proporcionadas)
+        // CLOUDINARY CONFIGURATION (Confirmed values)
         const CLOUDINARY_CLOUD_NAME = "daj3jaqd9"; 
         const CLOUDINARY_UPLOAD_PRESET = "tws_music_uploads"; 
-        // Colección de Firestore (Ruta pública para que todos vean las canciones)
         const PUBLIC_MUSIC_COLLECTION_PATH = 'public/data/music_links'; 
 
-        // Esta función se llama una vez que Firebase está autenticado
         window.setupApp = (db, auth, uid, app_id) => {
             dbInstance = db;
             userId = uid;
             appId = app_id;
             
-            document.getElementById('user-info').textContent = `ID de Usuario: ${userId}`;
+            // document.getElementById('user-info').textContent = `User ID: ${userId}`; // Elemento oculto
             
-            // Llamar a la lógica de la app después de la inicialización
             initAppLogic();
         };
 
-        // Función de utilidad para mostrar mensajes de estado y registrarlos en el Log (MEJORADA)
         function displayStatus(message, type = 'info', duration = 5000) { 
             clearTimeout(statusTimeout);
             const statusMessage = document.getElementById('status-message');
             const logContainer = document.getElementById('activity-log');
 
-            // --- 1. Manejo del Mensaje Temporal (Status Bar) ---
+            // --- 1. Temporary Status Bar ---
             statusMessage.textContent = message;
             statusMessage.classList.remove('hidden');
 
@@ -249,14 +221,14 @@
             switch(type) {
                 case 'error':
                     colorClass = 'bg-red-900 text-red-300 border-red-700';
-                    duration = 0; // Los errores no se auto-ocultan en la barra temporal
+                    duration = 0; 
                     break;
                 case 'success':
                     colorClass = 'bg-green-900 text-green-300 border-green-700';
                     break;
                 case 'loading':
                     colorClass = 'bg-blue-900 text-blue-300 border-blue-700';
-                    duration = 0; // La carga no se auto-oculta
+                    duration = 0; 
                     break;
                 default:
                     colorClass = 'bg-gray-700 text-gray-300 border-gray-600';
@@ -270,7 +242,7 @@
                 }, duration);
             }
             
-            // --- 2. Manejo del Registro de Actividad (Persistent Log) ---
+            // --- 2. Persistent Log (still populating, though hidden for UI) ---
             const logEntry = document.createElement('p');
             const timestamp = new Date().toLocaleTimeString();
             
@@ -297,34 +269,27 @@
             }
             
             logEntry.className = logColorClass;
-            // flex-col-reverse en el contenedor hace que el prepend (insertBefore) funcione de forma inversa
             logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}] [${prefix}]</span> ${message}`; 
             
-            // Insertar al inicio (los más nuevos aparecen primero)
             logContainer.prepend(logEntry);
             
-            // Si el log es muy largo, eliminar el elemento más antiguo para limitar la altura
             if (logContainer.children.length > 20) {
                 logContainer.removeChild(logContainer.lastChild);
             }
 
         }
         
-        // Función para renderizar un elemento de la lista de música
         function renderMusicItem(item) {
-            // Genera el HTML para cada canción
             const div = document.createElement('div');
             div.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#21262d] p-3 rounded-lg border border-[#30363d]';
             
-            // Contenedor de Nombre y Reproductor
             const infoContainer = document.createElement('div');
             infoContainer.className = 'flex flex-col w-full sm:w-2/3 mb-2 sm:mb-0';
             
             const titleSpan = document.createElement('span');
             titleSpan.className = 'truncate text-white font-medium mb-2';
-            titleSpan.textContent = item.customName || 'Nombre no asignado';
+            titleSpan.textContent = item.customName || 'Unassigned Name';
             
-            // Reproductor de Audio
             const audioPlayer = document.createElement('audio');
             audioPlayer.controls = true;
             audioPlayer.src = item.sharedUrl;
@@ -333,11 +298,10 @@
             infoContainer.appendChild(titleSpan);
             infoContainer.appendChild(audioPlayer);
 
-            // Botón de Copiar Enlace
             const copyButton = document.createElement('button');
             copyButton.className = 'copy-link-btn w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded-full transition duration-200 mt-2 sm:mt-0';
-            copyButton.textContent = 'Copiar Enlace';
-            copyButton.dataset.url = item.sharedUrl; // Almacena la URL real
+            copyButton.textContent = 'Copy Link';
+            copyButton.dataset.url = item.sharedUrl; 
 
             div.appendChild(infoContainer);
             div.appendChild(copyButton);
@@ -345,90 +309,81 @@
             return div;
         }
 
-        // Lógica de Renderizado y Escucha de Firestore
+        // Lógica de Renderizado y Escucha de Firestore (Puntos 7 y 10)
         function setupMusicListener() {
             if (!dbInstance) {
-                document.getElementById('list-status').textContent = 'Error: Base de datos no disponible. Recarga la página.';
-                displayStatus('Error de DB: Base de datos no disponible para escuchar cambios.', 'error');
+                document.getElementById('list-status').textContent = 'Error: Database not available. Please refresh the page.';
+                displayStatus('DB Error: Database not available to listen for changes.', 'error');
                 return;
             }
             
             const musicListContainer = document.getElementById('music-list');
-            // Nota: Aquí se usa la ruta pública para la colección
             const collectionRef = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
             
-            // Query para ordenar por fecha de creación (los más nuevos primero)
             const musicQuery = query(collectionRef, orderBy('createdAt', 'desc'));
             
-            // Escuchar cambios en tiempo real (onSnapshot)
+            // Esta función maneja la actualización de la lista en tiempo real
             const unsubscribe = onSnapshot(musicQuery, (snapshot) => {
                 const songs = [];
                 snapshot.forEach(doc => {
-                    // Asegurar que solo se añaden documentos válidos con URL
                     const data = doc.data();
                     if (data.sharedUrl) {
                         songs.push(data);
                     }
                 });
 
-                // Limpiar la lista actual
                 musicListContainer.innerHTML = '';
-                document.getElementById('song-count').textContent = `Total: ${songs.length} canciones`;
+                document.getElementById('song-count').textContent = `Total: ${songs.length} songs`;
 
                 if (songs.length === 0) {
-                    musicListContainer.innerHTML = '<p class="text-center text-gray-500">Aún no hay canciones subidas.</p>';
+                    musicListContainer.innerHTML = '<p class="text-center text-gray-500">No songs have been uploaded yet.</p>';
                     return;
                 }
                 
-                // Renderizar cada canción
                 songs.forEach(song => {
                     musicListContainer.appendChild(renderMusicItem(song));
                 });
 
-                // Añadir event listeners a los nuevos botones de copiar
                 setupCopyButtons();
-                displayStatus(`Lista de ${songs.length} canciones actualizada.`, 'info', 2000);
+                displayStatus(`${songs.length} songs list updated.`, 'info', 2000);
             }, (error) => {
-                console.error("Error al escuchar la lista de música:", error);
-                document.getElementById('list-status').textContent = 'Error al cargar la lista de música. Verifica los permisos.';
-                displayStatus(`Error de Firestore: Falló la suscripción a la lista de música.`, 'error');
+                console.error("Error listening to music list:", error);
+                document.getElementById('list-status').textContent = 'Error loading music list. Check permissions.';
+                displayStatus(`Firestore Error: Failed to subscribe to music list.`, 'error');
             });
             
-            // Opcional: devolver la función de desuscripción para limpiar el listener
             return unsubscribe;
         }
         
-        // Función para guardar el enlace en Firestore
+        // Función para guardar el enlace en Firestore (Punto 8)
         async function saveLinkToFirestore(customName, sharedUrl) {
             if (!dbInstance) {
-                 displayStatus('Error: La Base de Datos no está lista para guardar.', 'error');
+                 displayStatus('Error: Database is not ready to save.', 'error');
                  return false;
             }
             try {
-                // Ruta pública para que todos los usuarios la vean
                 const path = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
                 await addDoc(path, {
                     customName: customName,
                     sharedUrl: sharedUrl,
-                    uploadedBy: userId, // Quién subió el archivo
-                    createdAt: serverTimestamp() // Marca de tiempo del servidor
+                    uploadedBy: userId, 
+                    createdAt: serverTimestamp() 
                 });
-                displayStatus(`Guardado exitoso en Firestore. Nombre: ${customName}`, 'info', 3000);
+                displayStatus(`Successfully saved to Firestore. Name: ${customName}`, 'success', 3000); // Cambiado a success
                 return true;
             } catch (error) {
-                console.error("Error al guardar el enlace en Firestore:", error);
-                displayStatus(`Error al guardar el enlace en DB: ${error.message}`, 'error');
+                console.error("Error saving link to Firestore:", error);
+                displayStatus(`Error saving link to DB: ${error.message}`, 'error');
                 return false;
             }
         }
 
-        // Lógica de Subida a Cloudinary (MEJORADA)
+        // Lógica de Subida a Cloudinary (Punto 8)
         async function handleUpload(e) {
             e.preventDefault();
 
-            // 1. Verificación de credenciales de Cloudinary
             if (CLOUDINARY_CLOUD_NAME === "" || CLOUDINARY_UPLOAD_PRESET === "") {
-                 displayStatus('ERROR: La configuración de Cloudinary está incompleta. Revisa las constantes.', 'error');
+                 displayStatus('ERROR: Cloudinary configuration is incomplete. Check constants.', 'error');
                  return;
             }
             
@@ -437,35 +392,31 @@
             const file = fileInput.files[0];
             const customName = customNameInput.value.trim();
             
-            // 2. Validación de Inputs
             if (!file) {
-                displayStatus('Validación: Por favor, selecciona un archivo MP3.', 'error');
+                displayStatus('Validation: Please select an MP3 file.', 'error');
                 return;
             }
             if (!customName) {
-                 displayStatus('Validación: Por favor, ingresa un nombre personalizado.', 'error');
+                 displayStatus('Validation: Please enter a custom name.', 'error');
                  return;
             }
             
-            // 3. Validación de Archivo (Tamaño y Tipo)
             if (file.size > MAX_FILE_SIZE) {
-                 displayStatus(`Error: El archivo es demasiado grande. Máximo ${MAX_FILE_SIZE / (1024 * 1024)} MB.`, 'error');
+                 displayStatus(`Error: File is too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)} MB.`, 'error');
                  return;
             }
             if (!file.type.startsWith('audio/')) {
-                 displayStatus('Error: Solo se permiten archivos de audio.', 'error');
+                 displayStatus('Error: Only audio files are allowed.', 'error');
                  return;
             }
 
-
-            displayStatus('Subiendo archivo, por favor espera...', 'loading');
+            displayStatus('Uploading file, please wait...', 'loading');
             document.getElementById('upload-button').disabled = true;
 
             try {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-                // Usamos el nombre personalizado como public_id para mantener la coherencia
                 formData.append('public_id', `music/${customName.replace(/[^a-z0-9]/gi, '_')}-${Date.now()}`); 
                 formData.append('resource_type', 'auto'); 
                 
@@ -480,31 +431,28 @@
 
                 if (response.ok) {
                     const sharedUrl = data.secure_url; 
-                    displayStatus(`Cloudinary: Subida completada. Guardando enlace...`, 'loading');
+                    displayStatus(`Cloudinary: Upload complete. Saving link...`, 'loading');
                     
-                    // Guardar la URL y el nombre en Firestore
                     const saved = await saveLinkToFirestore(customName, sharedUrl);
 
                     if (saved) {
-                         displayStatus(`¡Subida y guardado exitoso! Enlace de reproducción generado.`, 'success');
-                         // Limpiar el formulario
+                         displayStatus(`Success! Upload and save successful.`, 'success');
                          document.getElementById('mp3-upload-form').reset();
                     }
 
                 } else {
-                    displayStatus(`Error al subir a Cloudinary: ${data.error ? data.error.message : 'Error desconocido'}`, 'error');
-                    console.error("Error en la respuesta de Cloudinary:", data);
+                    displayStatus(`Cloudinary Upload Error: ${data.error ? data.error.message : 'Unknown error'}`, 'error');
+                    console.error("Cloudinary response error:", data);
                 }
 
             } catch (error) {
-                displayStatus(`Error de red o conexión: ${error.message}`, 'error');
-                console.error("Error de subida:", error);
+                displayStatus(`Network or Connection Error: ${error.message}`, 'error');
+                console.error("Upload error:", error);
             } finally {
                 document.getElementById('upload-button').disabled = false;
             }
         }
         
-        // Lógica de copiar enlace (se activa después de cada renderizado de la lista)
         function setupCopyButtons() {
             document.querySelectorAll('.copy-link-btn').forEach(button => {
                 button.addEventListener('click', () => {
@@ -516,16 +464,16 @@
                     textarea.select();
                     try {
                         document.execCommand('copy');
-                        displayStatus('Enlace copiado al portapapeles: ' + urlToCopy.substring(0, 50) + '...', 'success', 3000);
+                        displayStatus('Link copied to clipboard: ' + urlToCopy.substring(0, 50) + '...', 'success', 3000);
                     } catch (err) {
-                        displayStatus('Error al intentar copiar el enlace.', 'error');
+                        displayStatus('Error attempting to copy link.', 'error');
                     }
                     document.body.removeChild(textarea);
                 });
             });
         }
 
-        // Lógica de Navegación de Pestañas
+        // Lógica de Navegación de Pestañas (Punto 7)
         const showSection = (id) => {
             document.getElementById('home').classList.add('hidden');
             document.getElementById('music-links').classList.add('hidden');
@@ -550,12 +498,13 @@
             });
         };
 
-        // Función principal que inicializa toda la lógica de la app
         function initAppLogic() {
-            // Log de inicio
-            displayStatus('Aplicación inicializada y lista para Firebase/Cloudinary.', 'info', 3000);
+            displayStatus('Application initialized and ready for Firebase/Cloudinary.', 'info', 3000);
             
-            // Manejar los clics en los enlaces de navegación
+            // Conectar el formulario a la función de subida
+            document.getElementById('mp3-upload-form').addEventListener('submit', handleUpload);
+
+            // Manejar los clics en los enlaces de navegación (Punto 7)
             const navLinks = document.querySelectorAll('header nav a');
             navLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
@@ -565,12 +514,10 @@
                 });
             });
 
-            // Conectar el formulario a la función de subida
-            document.getElementById('mp3-upload-form').addEventListener('submit', handleUpload);
-
             // Mostrar la página de inicio por defecto
             showSection('home');
         }
     </script>
 </body>
 </html>
+```eof
