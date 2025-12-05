@@ -79,6 +79,7 @@
                 <span id="nav-home" class="nav-link active font-medium" data-view="home">Home & Upload</span>
                 <span id="nav-folders" class="nav-link font-medium" data-view="folders">Folders</span>
             </div>
+            <!-- Botón de ajustes llama a la función global showModal -->
             <button id="settings-btn" class="p-2 rounded-full hover:bg-gray-700 transition" onclick="showModal('settingsModal')">
                  <i data-lucide="settings" class="w-5 h-5 text-gray-400"></i>
             </button>
@@ -162,6 +163,7 @@
             <div id="folders-main-content">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-600 pb-4">
                     <h2 class="text-2xl font-bold text-gray-100">User Folders (Playlists)</h2>
+                    <!-- Botón llama a la función global showModal -->
                     <button class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" onclick="showModal('createFolderModal')">
                         <i data-lucide="folder-plus" class="w-5 h-5 inline mr-1"></i> Create New Folder
                     </button>
@@ -222,7 +224,7 @@
             <input type="text" id="nickname-input" class="input-style p-2 w-full mb-4" placeholder="Enter your desired nickname">
             
             <div class="flex justify-end space-x-2">
-                <!-- CORRECCIÓN: Botón "Close" ahora llama a la función para cerrar el modal. -->
+                <!-- CORREGIDO: Botón "Close" ahora llama a la función global hideModal -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('settingsModal')">Close</button>
                 <button id="save-nickname-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">Save Nickname</button>
             </div>
@@ -239,6 +241,7 @@
             <input type="text" id="folder-name-input" class="input-style p-2 w-full mb-4" placeholder="Ex: Best of RPGs OST">
             
             <div class="flex justify-end space-x-2">
+                <!-- CORREGIDO: Botón "Cancel" ahora llama a la función global hideModal -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('createFolderModal')">Cancel</button>
                 <button id="create-folder-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition">Create Folder</button>
             </div>
@@ -257,6 +260,7 @@
             </select>
             
             <div class="flex justify-end space-x-2">
+                <!-- CORREGIDO: Botón "Cancel" ahora llama a la función global hideModal -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('addSongModal')">Cancel</button>
                 <button id="confirm-add-song-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition" disabled>Add Song</button>
             </div>
@@ -265,6 +269,7 @@
 
     <!-- SCRIPT ESTÁNDAR PARA FUNCIONES GLOBALES (SOLUCIÓN AL ReferenceError) -->
     <script>
+        // Hacemos que estas funciones sean globales y accesibles desde el atributo onclick="" del HTML.
         function showModal(id) {
             document.getElementById(id)?.classList.remove('hidden');
         }
@@ -382,9 +387,6 @@
             }, 8000);
         }
 
-        // NOTA: showModal y hideModal fueron movidas al <script> global para funcionar con onclick=""
-
-
         // Lógica para alternar las vistas sin superponerse (comportamiento de pestañas)
         function showView(viewName) {
             homeView.classList.add('hidden');
@@ -435,9 +437,8 @@
                 userProfiles[userId] = nickname.trim();
                 filterAndSortSongs();
             } catch (error) {
-                // CORRECCIÓN: Aseguramos que el error se muestra en el modal de Settings
-                console.error("Error saving nickname:", error);
                 // Si falla por permisos, debe ser visible al usuario
+                console.error("Error saving nickname:", error);
                 displayStatus('Error al guardar el nickname. Revisa los permisos de Firestore.', 'bg-red-600', statusElement);
             }
         }
@@ -653,6 +654,7 @@
                     const songId = e.currentTarget.getAttribute('data-id');
                     const cloudinaryId = e.currentTarget.getAttribute('data-cloudinary-id');
                     
+                    // Nota: Aquí se usa confirm() temporalmente para evitar modales complejos en HTML
                     if (confirm("¿Estás seguro de que quieres eliminar esta canción? (Solo elimina el registro de la DB)")) {
                         deleteSong(songId, cloudinaryId);
                     }
@@ -792,7 +794,7 @@
                 setTimeout(() => hideModal('createFolderModal'), 1000);
 
             } catch (error) {
-                console.error("Error creating folder:", error);
+                console.error("Error creando carpeta:", error);
                 displayStatus(`Error creando carpeta: ${error.message}`, 'bg-red-600', statusElement);
             } finally {
                 createButton.textContent = 'Create Folder';
@@ -934,6 +936,7 @@
             const removeBtn = div.querySelector('.remove-from-folder-btn');
             if (removeBtn) {
                 removeBtn.addEventListener('click', () => {
+                    // Nota: Aquí se usa confirm() temporalmente
                     if (confirm("¿Estás seguro de que quieres quitar esta canción de la carpeta?")) {
                         removeSongFromFolder(currentFolderId, song.songId);
                     }
@@ -1048,7 +1051,8 @@
             document.body.appendChild(textarea);
             textarea.select();
             try {
-                document.execCommand('copy');
+                // Función de copia estándar para el navegador
+                document.execCommand('copy'); 
                 displayStatus('¡Enlace copiado al portapapeles!', 'bg-green-600');
             } catch (err) {
                 console.error('Error al copiar el texto: ', err);
@@ -1127,11 +1131,12 @@
                         
                         const profileRef = doc(db, `artifacts/${appId}/public/data/${PROFILE_COLLECTION_NAME}`, userId);
                         
-                        // CORRECCIÓN: Usar getDoc dentro de onAuthStateChanged para obtener el nickname
+                        // Obtener el nickname del perfil del usuario (ya configurado)
                         try {
                             const profileSnap = await getDoc(profileRef); 
                             if (profileSnap.exists()) {
                                 nicknameInput.value = profileSnap.data().nickname;
+                                userProfiles[userId] = profileSnap.data().nickname; // Aseguramos el caché inicial
                             } else {
                                 nicknameInput.value = `User-${userId.substring(0, 5)}`;
                                 displayStatus('Set your custom nickname!', 'bg-yellow-600', statusElement);
