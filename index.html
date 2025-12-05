@@ -43,6 +43,8 @@
         /* Botones de acción */
         .btn-primary { background-color: var(--color-primary); color: white; transition: background-color 0.2s; }
         .btn-primary:hover { background-color: var(--color-primary-hover); }
+        .btn-secondary { background-color: #f59e0b; color: white; transition: background-color 0.2s; }
+        .btn-secondary:hover { background-color: #d97706; }
         .btn-danger { background-color: var(--color-danger); color: white; cursor: not-allowed; transition: background-color 0.2s; }
         .btn-danger:hover { background-color: #dc2626; }
         .nav-link { cursor: pointer; padding: 8px 12px; border-radius: 6px; }
@@ -53,7 +55,7 @@
         audio { height: 40px; } /* Ajuste de altura */
 
         /* Estilo para las tarjetas de canciones/carpetas */
-        .song-item, .folder-item {
+        .song-item, .folder-item, .folder-song-item {
             border: 1px solid #4b5563;
             border-radius: 8px;
             background-color: #4b5563; /* Más oscuro que el fondo principal para destacar */
@@ -87,6 +89,7 @@
     <div id="main-content-container">
 
         <!-- VISTA 1: HOME & UPLOAD (Contiene la carga y la lista principal) -->
+        <!-- La clase 'hidden' se añade/remueve por showView() -->
         <div id="home-view" class="lg:flex lg:space-x-8">
             <!-- Columna de Carga (Upload) -->
             <div id="upload-card" class="w-full lg:w-1/2 p-6 card mb-8 lg:mb-0">
@@ -108,8 +111,8 @@
 
                     <!-- Campo de nombre personalizado -->
                     <div>
-                        <label for="customName" class="block text-sm font-medium mb-1 text-gray-300">Custom Name</label>
-                        <input type="text" id="customName" placeholder="Ex: duty calls" class="input-style p-3 w-full rounded-lg">
+                        <label for="customName" class="block text-sm font-medium mb-1 text-gray-300">Custom Name (Used for URL)</label>
+                        <input type="text" id="customName" placeholder="Ex: Airship (will be airship.mp3 in URL)" class="input-style p-3 w-full rounded-lg">
                     </div>
                     
                     <!-- Botón de Carga/Estado DB -->
@@ -157,32 +160,46 @@
 
         <!-- VISTA 2: FOLDERS -->
         <div id="folders-view" class="hidden p-6 card">
-            <div class="flex justify-between items-center mb-6 border-b border-gray-600 pb-4">
-                <h2 class="text-2xl font-bold text-gray-100">User Folders (Playlists)</h2>
-                <button class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" onclick="showModal('createFolderModal')">
-                    <i data-lucide="folder-plus" class="w-5 h-5 inline mr-1"></i> Create New Folder
-                </button>
-            </div>
+            <div id="folders-main-content">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-600 pb-4">
+                    <h2 class="text-2xl font-bold text-gray-100">User Folders (Playlists)</h2>
+                    <!-- CORRECCIÓN: Agregar handler onclick para abrir el modal -->
+                    <button class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" onclick="showModal('createFolderModal')">
+                        <i data-lucide="folder-plus" class="w-5 h-5 inline mr-1"></i> Create New Folder
+                    </button>
+                </div>
 
-            <div id="folder-loading-spinner" class="hidden text-center py-10">
-                <div class="animate-spin inline-block w-8 h-8 border-4 border-t-4 border-blue-400 border-opacity-25 rounded-full"></div>
-                <p class="text-blue-400 mt-2">Cargando carpetas...</p>
-            </div>
-            
-            <!-- Lista de Carpetas -->
-            <div id="folders-list" class="space-y-4 min-h-[400px]">
-                <div id="no-folders-message" class="text-center text-gray-500 mt-10">
-                    No hay carpetas creadas. Sé el primero en crear una.
+                <div id="folder-loading-spinner" class="hidden text-center py-10">
+                    <div class="animate-spin inline-block w-8 h-8 border-4 border-t-4 border-blue-400 border-opacity-25 rounded-full"></div>
+                    <p class="text-blue-400 mt-2">Cargando carpetas...</p>
+                </div>
+                
+                <!-- Lista de Carpetas -->
+                <div id="folders-list" class="space-y-4 min-h-[400px]">
+                    <div id="no-folders-message" class="text-center text-gray-500 mt-10">
+                        No hay carpetas creadas. Sé el primero en crear una.
+                    </div>
                 </div>
             </div>
 
-            <!-- Detalle de Carpeta (Oculto) -->
-            <div id="folder-detail-view" class="hidden mt-8 p-4 card">
-                <button class="text-blue-400 hover:text-blue-300 mb-4" onclick="showView('folders')">&larr; Back to Folders</button>
-                <h3 id="folder-detail-name" class="text-xl font-bold mb-4"></h3>
-                <p class="text-gray-400">Owner: <span id="folder-detail-owner"></span></p>
-                <div id="folder-songs-list" class="space-y-3 mt-4">
-                    <p class="text-yellow-400 font-medium">Song selection and ordering feature coming soon!</p>
+            <!-- Detalle de Carpeta -->
+            <div id="folder-detail-view" class="hidden mt-8 p-6 card w-full">
+                <button class="text-blue-400 hover:text-blue-300 mb-4 font-semibold" onclick="showView('folders')">&larr; Back to Folders</button>
+                <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
+                    <h3 id="folder-detail-name" class="text-3xl font-bold text-yellow-400"></h3>
+                    <p class="text-sm text-gray-400">Owner: <span id="folder-detail-owner" class="font-medium"></span></p>
+                </div>
+                
+                <p class="text-gray-400 mb-4">Drag and drop songs below to reorder your playlist.</p>
+                
+                <div id="folder-songs-list" class="space-y-3">
+                    <!-- Canciones se inyectan aquí -->
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="save-order-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" disabled>
+                        Save Order
+                    </button>
                 </div>
             </div>
         </div>
@@ -225,18 +242,46 @@
         </div>
     </div>
 
+    <!-- MODAL: Add Song to Folder -->
+    <div id="addSongModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-700 p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">Add "<span id="song-to-add-name" class="text-yellow-400"></span>" to Folder</h3>
+            <div id="add-song-status" class="hidden p-2 rounded-md text-sm mb-4 font-medium"></div>
+
+            <label for="folder-select" class="block text-sm font-medium mb-1 text-gray-300">Select Folder</label>
+            <select id="folder-select" class="input-style p-2 w-full mb-4">
+                <option value="" disabled selected>-- Select a folder --</option>
+            </select>
+            
+            <div class="flex justify-end space-x-2">
+                <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('addSongModal')">Cancel</button>
+                <button id="confirm-add-song-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition" disabled>Add Song</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Bibliotecas de Firebase y Storage -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Inicializar iconos de Lucide
         lucide.createIcons();
 
+        // --- FUNCIONES DE UTILIDAD PARA CLOUDINARY ---
+        // Función para limpiar una cadena y hacerla segura para URL/Public ID
+        function slugify(text) {
+            return text
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres no alfanuméricos (excepto espacios y guiones)
+                .replace(/[\s-]+/g, '_');    // Reemplazar espacios y guiones por guiones bajos (underscores)
+        }
+
         // --- CONFIGURACIÓN DE CLOUDINARY (IMPORTANTE) ---
-        // ESTOS VALORES FUERON PROPORCIONADOS POR EL USUARIO Y DEBEN RESOLVER EL ERROR 401.
         const CLOUDINARY_CONFIG = {
             cloudName: "daj3jaqd9",
             uploadPreset: "tws_music_uploads",
@@ -271,12 +316,19 @@
         const loadingSpinner = document.getElementById('loading-spinner');
         const foldersList = document.getElementById('folders-list');
         const noFoldersMessage = document.getElementById('no-folders-message');
+        const saveOrderBtn = document.getElementById('save-order-btn');
+        const folderDetailView = document.getElementById('folder-detail-view');
+        const foldersMainContent = document.getElementById('folders-main-content');
+        const homeView = document.getElementById('home-view'); // Nuevo
+        const foldersView = document.getElementById('folders-view'); // Nuevo
         
         // Estado de la interfaz
         let allSongs = [];
         let userProfiles = {}; // Cache para nicknames
         let allFolders = [];
         let currentView = 'home';
+        let currentFolderId = null; 
+        let songToAddMetadata = null; 
 
         // Función para obtener la configuración (DATOS INSERTADOS AQUÍ)
         function getFirebaseConfig() {
@@ -292,7 +344,6 @@
             };
             // --- FIN CONFIGURACIÓN MANUAL DE FIREBASE ---
 
-            // Si la configuración del entorno existe, la usamos
             if (firebaseConfigRaw) {
                 try {
                     const envConfig = JSON.parse(firebaseConfigRaw);
@@ -304,7 +355,6 @@
                 }
             }
             
-            // Devolver la configuración manual proporcionada por el usuario
             return YOUR_FIREBASE_CONFIG;
         }
 
@@ -325,40 +375,41 @@
         function hideModal(id) {
             document.getElementById(id).classList.add('hidden');
         }
-
+        
+        // CORRECCIÓN: Lógica para alternar las vistas sin superponerse (comportamiento de pestañas)
         function showView(viewName) {
-            document.getElementById('home-view').classList.add('hidden');
-            document.getElementById('folders-view').classList.add('hidden');
-            document.getElementById('folder-detail-view').classList.add('hidden');
-            
-            // Ocultar detalle si cambiamos de vista principal
-            if (viewName === 'home' || viewName === 'folders') {
-                document.getElementById('folder-detail-view').classList.add('hidden');
-            }
+            homeView.classList.add('hidden');
+            foldersView.classList.add('hidden');
+            folderDetailView.classList.add('hidden');
+            foldersMainContent.classList.remove('hidden'); 
 
             if (viewName === 'home') {
-                document.getElementById('home-view').classList.remove('hidden');
+                homeView.classList.remove('hidden');
+                currentFolderId = null;
             } else if (viewName === 'folders') {
-                document.getElementById('folders-view').classList.remove('hidden');
-                setupFoldersListener(); // Asegurar que el listener de carpetas esté activo
+                foldersView.classList.remove('hidden');
+                currentFolderId = null;
             } else if (viewName.startsWith('folderDetail-')) {
-                document.getElementById('folders-view').classList.remove('hidden');
-                document.getElementById('folder-detail-view').classList.remove('hidden');
-                // Lógica de mostrar detalle (pendiente)
+                const folderId = viewName.split('-')[1];
+                currentFolderId = folderId;
+                foldersView.classList.remove('hidden'); // Mostrar el contenedor de carpetas, pero...
+                foldersMainContent.classList.add('hidden'); // Ocultar la lista de carpetas
+                folderDetailView.classList.remove('hidden'); // Mostrar el detalle
+                renderFolderDetail(folderId);
             }
 
             // Manejar clase activa del navbar
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.remove('active');
             });
-            document.getElementById(`nav-${viewName}`).classList.add('active');
+            const navKey = viewName.startsWith('folderDetail') ? 'folders' : viewName;
+            document.getElementById(`nav-${navKey}`).classList.add('active');
 
             currentView = viewName;
         }
 
-        // --- LÓGICA DE NICKNAME (Punto 2) ---
+        // --- LÓGICA DE NICKNAME ---
 
-        // 1. Guardar Nickname
         async function saveNickname(nickname) {
             if (!db || !userId) return;
             const statusElement = document.getElementById('nickname-status');
@@ -368,9 +419,7 @@
                 const profileRef = doc(db, `artifacts/${appId}/public/data/${PROFILE_COLLECTION_NAME}`, userId);
                 await setDoc(profileRef, { nickname: nickname.trim(), lastUpdate: new Date() });
                 displayStatus(`Nickname guardado: ${nickname}`, 'bg-green-600', statusElement);
-                // Actualizar cache local
                 userProfiles[userId] = nickname.trim();
-                // Si la lista está visible, forzar renderizado para actualizar el nombre
                 filterAndSortSongs();
             } catch (error) {
                 console.error("Error saving nickname:", error);
@@ -378,7 +427,6 @@
             }
         }
 
-        // 2. Listener de Perfiles (para caching de Nicknames)
         function setupProfilesListener() {
             if (!db || !userId) return;
             const collectionPath = `artifacts/${appId}/public/data/${PROFILE_COLLECTION_NAME}`;
@@ -390,7 +438,6 @@
                     userProfiles[doc.id] = doc.data().nickname || `User-${doc.id.substring(0, 5)}`;
                 });
                 
-                // Si estamos en la vista de canciones, refrescar
                 if (currentView === 'home') {
                     filterAndSortSongs();
                 }
@@ -399,7 +446,7 @@
             });
         }
         
-        // --- LÓGICA DE SUBIDA DE ARCHIVOS (Misma lógica, botón de texto corregido) ---
+        // --- LÓGICA DE SUBIDA DE ARCHIVOS (CORRECCIÓN CLOUDINARY) ---
         async function uploadFileAndSaveMetadata(file, customName) {
             if (!db || !userId) {
                 displayStatus("Error: No autenticado o DB no inicializada.", 'bg-red-600');
@@ -409,13 +456,21 @@
             const { cloudName, uploadPreset, folder } = CLOUDINARY_CONFIG;
             const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
             
+            const songName = customName || file.name.split('.').slice(0, -1).join('.');
+            const slugifiedName = slugify(songName); // Nuevo: Nombre limpio para el ID público
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', uploadPreset);
             formData.append('folder', folder);
             
-            const songName = customName || file.name.split('.').slice(0, -1).join('.');
-
+            // CRÍTICO: Usar el nombre limpio como public_id para que aparezca en la URL final
+            if (slugifiedName) {
+                formData.append('public_id', slugifiedName);
+                // Para sobrescribir si ya existe un archivo con ese ID:
+                formData.append('overwrite', 'true');
+            }
+            
             uploadButton.textContent = "Uploading..."; 
             uploadButton.disabled = true;
 
@@ -433,21 +488,21 @@
 
                 const data = await response.json();
                 
-                // 2. Guardar metadatos en Firestore (Colección Pública)
+                // 2. Guardar metadatos en Firestore
                 const collectionPath = `artifacts/${appId}/public/data/${SONG_COLLECTION_NAME}`;
                 
                 const songData = {
-                    name: songName,
+                    name: songName, // Nombre de visualización
                     fileName: file.name,
-                    url: data.secure_url, 
+                    url: data.secure_url, // Esta URL ahora debería usar el slugifiedName/public_id
                     uploadedBy: userId,
                     timestamp: new Date(),
-                    cloudinaryId: data.public_id 
+                    cloudinaryId: data.public_id // Esto ahora será el slugifiedName
                 };
 
                 await addDoc(collection(db, collectionPath), songData);
                 
-                displayStatus(`¡"${songName}" subida y registrada con éxito!`, 'bg-green-600');
+                displayStatus(`¡"${songName}" subida y registrada con éxito! Enlace URL limpio generado.`, 'bg-green-600');
 
             } catch (error) {
                 console.error("Upload Error:", error);
@@ -460,7 +515,6 @@
 
         // --- LÓGICA DE FIREBASE PARA CANCIONES (Catálogo principal) ---
         
-        // Listener de Firestore (Canciones Públicas)
         function setupSongsListener() {
             if (!db || !userId) return;
 
@@ -478,7 +532,7 @@
                     allSongs.push({
                         id: doc.id,
                         ...data,
-                        timestamp: data.timestamp ? data.timestamp.toDate() : new Date(0) // Convertir timestamp
+                        timestamp: data.timestamp ? data.timestamp.toDate() : new Date(0)
                     });
                 });
                 filterAndSortSongs();
@@ -490,7 +544,6 @@
         }
 
         function filterAndSortSongs() {
-            // ... (Lógica de filtrado y ordenación existente)
             let tempSongs = [...allSongs];
             const searchTerm = searchInput.value.toLowerCase();
             const sortOrder = document.querySelector('input[name="sort"]:checked').value;
@@ -503,7 +556,7 @@
                 );
             }
             
-            // 2. Ordenación (in-memory, sin orderBy en Firestore)
+            // 2. Ordenación
             if (sortOrder === 'alpha') {
                 tempSongs.sort((a, b) => a.name.localeCompare(b.name));
             } else if (sortOrder === 'newest') {
@@ -515,7 +568,6 @@
             renderMusicList(tempSongs);
         }
         
-        // Renderizado de la lista
         function renderMusicList(songs) {
             musicList.innerHTML = '';
             songCountElement.textContent = songs.length;
@@ -531,7 +583,6 @@
             }
         }
 
-        // Creación de elemento de canción (MODIFICADO para usar Nickname)
         function createSongElement(song) {
             const div = document.createElement('div');
             div.className = 'song-item p-3 flex flex-col md:flex-row justify-between items-center';
@@ -539,13 +590,13 @@
 
             const name = song.name || song.fileName;
             const externalLink = song.url; 
-            // Obtener nickname del cache, fallback a User ID si no existe
             const uploaderName = userProfiles[song.uploadedBy] || `User-${song.uploadedBy.substring(0, 8)}...`;
 
 
             div.innerHTML = `
                 <div class="flex-grow w-full md:w-auto mb-3 md:mb-0">
                     <p class="font-semibold text-lg text-gray-100">${name}</p>
+                    <p class="text-xs text-gray-400">URL ID: ${song.cloudinaryId || 'N/A'}</p>
                     <p class="text-xs text-gray-400">Uploaded by: ${uploaderName}</p>
                     <p class="text-xs text-gray-400">Date: ${song.timestamp.toLocaleDateString()}</p>
                     <audio controls class="mt-2 w-full">
@@ -553,7 +604,10 @@
                         Your browser does not support the audio element.
                     </audio>
                 </div>
-                <div class="flex flex-shrink-0 space-x-2">
+                <div class="flex flex-shrink-0 space-x-2 mt-2 md:mt-0">
+                    <button class="add-to-folder-btn py-2 px-4 rounded-lg text-white font-semibold btn-secondary transition" data-id="${song.id}" data-name="${name}">
+                        Add to Folder
+                    </button>
                     <button class="copy-btn py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" data-url="${externalLink}">
                         Copy Link
                     </button>
@@ -565,10 +619,17 @@
                 </div>
             `;
 
-            // Añadir event listeners para copiar y eliminar
             div.querySelector('.copy-btn').addEventListener('click', (e) => {
                 const url = e.currentTarget.getAttribute('data-url');
                 copyToClipboard(url);
+            });
+            
+            div.querySelector('.add-to-folder-btn').addEventListener('click', (e) => {
+                songToAddMetadata = {
+                    id: e.currentTarget.getAttribute('data-id'),
+                    name: e.currentTarget.getAttribute('data-name')
+                };
+                openAddSongModal();
             });
 
             const deleteBtn = div.querySelector('.delete-btn');
@@ -586,7 +647,6 @@
             return div;
         }
         
-        // Event handler para la eliminación de una canción
         async function deleteSong(songId, cloudinaryId) {
             if (!db || !userId) {
                 displayStatus("Error: No autenticado.", 'bg-red-600');
@@ -598,16 +658,91 @@
                 const docRef = doc(db, collectionPath, songId);
                 await deleteDoc(docRef);
                 displayStatus("Canción eliminada del registro.", 'bg-yellow-600');
-                // Nota: La eliminación de Cloudinary requeriría una API key secreta, no es posible desde el cliente.
             } catch (error) {
                 console.error("Error deleting song from Firestore:", error);
                 displayStatus(`Error eliminando la canción: ${error.message}`, 'bg-red-600');
             }
         }
+        
+        // --- LÓGICA DEL MODAL AÑADIR CANCIÓN A CARPETA ---
 
-        // --- LÓGICA DE CARPETAS (Punto 3) ---
+        function openAddSongModal() {
+            const songNameElement = document.getElementById('song-to-add-name');
+            const folderSelect = document.getElementById('folder-select');
+            const confirmBtn = document.getElementById('confirm-add-song-btn');
 
-        // 1. Crear Carpeta
+            songNameElement.textContent = songToAddMetadata.name;
+            folderSelect.innerHTML = '<option value="" disabled selected>-- Select a folder --</option>';
+            confirmBtn.disabled = true;
+
+            allFolders.forEach(folder => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = `${folder.name} (${folder.ownerNickname})`;
+                folderSelect.appendChild(option);
+            });
+
+            folderSelect.onchange = () => {
+                confirmBtn.disabled = !folderSelect.value;
+            };
+
+            showModal('addSongModal');
+        }
+        
+        document.getElementById('confirm-add-song-btn').addEventListener('click', async () => {
+            if (!songToAddMetadata || !db || !userId) return;
+
+            const folderId = document.getElementById('folder-select').value;
+            if (!folderId) return;
+            
+            const statusElement = document.getElementById('add-song-status');
+            statusElement.classList.add('hidden');
+
+            const folder = allFolders.find(f => f.id === folderId);
+            if (!folder) {
+                displayStatus('Carpeta no encontrada.', 'bg-red-600', statusElement);
+                return;
+            }
+
+            const existingSong = allSongs.find(s => s.id === songToAddMetadata.id);
+
+            const songRef = {
+                songId: songToAddMetadata.id,
+                songName: songToAddMetadata.name,
+                url: existingSong?.url,
+                order: folder.songReferences.length + 1,
+            };
+            
+            const exists = folder.songReferences.some(ref => ref.songId === songRef.songId);
+            if (exists) {
+                displayStatus('La canción ya está en esta carpeta.', 'bg-yellow-600', statusElement);
+                return;
+            }
+
+            try {
+                const folderRef = doc(db, `artifacts/${appId}/public/data/${FOLDER_COLLECTION_NAME}`, folderId);
+                
+                const newSongReferences = [...folder.songReferences, songRef];
+                
+                await updateDoc(folderRef, {
+                    songReferences: newSongReferences
+                });
+                
+                displayStatus(`Canción añadida a "${folder.name}" con éxito!`, 'bg-green-600', statusElement);
+                hideModal('addSongModal');
+                songToAddMetadata = null;
+
+            } catch (error) {
+                console.error("Error adding song to folder:", error);
+                displayStatus(`Error al añadir la canción: ${error.message}`, 'bg-red-600', statusElement);
+            }
+        });
+
+        // --- LÓGICA DE CARPETAS ---
+
+        // Listener para el botón de confirmación de creación de carpeta
+        document.getElementById('create-folder-btn').addEventListener('click', createFolder);
+
         async function createFolder() {
             if (!db || !userId) return;
 
@@ -630,7 +765,7 @@
                     name: folderName,
                     ownerId: userId,
                     ownerNickname: userProfiles[userId] || `User-${userId.substring(0, 8)}...`,
-                    songReferences: [], // Aquí irán los {songId, order}
+                    songReferences: [], 
                     createdAt: new Date()
                 };
 
@@ -650,7 +785,6 @@
             }
         }
 
-        // 2. Listener de Carpetas
         function setupFoldersListener() {
             if (!db || !userId) return;
 
@@ -665,16 +799,23 @@
                 allFolders = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
-                    allFolders.push({ id: doc.id, ...data });
+                    allFolders.push({ 
+                        id: doc.id, 
+                        ...data,
+                        songReferences: data.songReferences || []
+                    });
                 });
                 renderFoldersList(allFolders);
+
+                if (currentFolderId) {
+                    renderFolderDetail(currentFolderId);
+                }
             }, (error) => {
                 console.error("Error fetching folders:", error);
                 document.getElementById('folder-loading-spinner').classList.add('hidden');
             });
         }
 
-        // 3. Renderizado de la lista de carpetas
         function renderFoldersList(folders) {
             foldersList.innerHTML = '';
             
@@ -689,11 +830,10 @@
             }
         }
 
-        // 4. Creación de elemento de carpeta
         function createFolderElement(folder) {
             const div = document.createElement('div');
-            div.className = 'folder-item p-4 flex justify-between items-center cursor-pointer hover:bg-gray-600';
-            div.onclick = () => showView(`folderDetail-${folder.id}`); // Lógica para ver el detalle (siguiente paso)
+            div.className = 'folder-item p-4 flex justify-between items-center cursor-pointer hover:bg-gray-600 transition';
+            div.onclick = () => showView(`folderDetail-${folder.id}`); 
             
             const songCount = folder.songReferences ? folder.songReferences.length : 0;
             const owner = folder.ownerNickname || `User-${folder.ownerId.substring(0, 8)}...`;
@@ -703,19 +843,190 @@
                     <i data-lucide="folder" class="w-6 h-6 text-yellow-400"></i>
                     <div>
                         <p class="font-semibold text-lg text-gray-100">${folder.name}</p>
-                        <p class="text-sm text-gray-400">${songCount} songs | Created by: ${owner}</p>
+                        <p class="text-sm text-gray-400">${songCount} song${songCount === 1 ? '' : 's'} | Created by: ${owner}</p>
                     </div>
                 </div>
                 <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
             `;
-            // Re-renderizar iconos de lucide dentro del nuevo elemento
             lucide.createIcons();
             return div;
         }
 
+        function renderFolderDetail(folderId) {
+            const folder = allFolders.find(f => f.id === folderId);
+            const listElement = document.getElementById('folder-songs-list');
+            
+            if (!folder) {
+                listElement.innerHTML = '<p class="text-red-400">Error: Carpeta no encontrada.</p>';
+                return;
+            }
+            
+            document.getElementById('folder-detail-name').textContent = folder.name;
+            document.getElementById('folder-detail-owner').textContent = folder.ownerNickname;
+            
+            const songsInFolder = folder.songReferences.sort((a, b) => (a.order || 0) - (b.order || 0));
+            listElement.innerHTML = '';
+
+            if (songsInFolder.length === 0) {
+                listElement.innerHTML = `<p class="text-center text-gray-500 mt-10">
+                    Esta carpeta está vacía. Añade canciones desde la pestaña "Home & Upload".
+                </p>`;
+                saveOrderBtn.disabled = true;
+                return;
+            }
+            
+            songsInFolder.forEach((song, index) => {
+                const songElement = createFolderSongElement(song, index + 1, folder.ownerId);
+                listElement.appendChild(songElement);
+            });
+            
+            setupDragAndDrop(listElement);
+            saveOrderBtn.disabled = true;
+
+            if (folder.ownerId !== userId) {
+                 saveOrderBtn.disabled = true;
+                 listElement.classList.add('pointer-events-none', 'opacity-75');
+                 displayStatus('Solo el propietario puede ordenar esta carpeta.', 'bg-yellow-600', document.getElementById('folder-detail-view'));
+            } else {
+                 listElement.classList.remove('pointer-events-none', 'opacity-75');
+            }
+        }
+
+        function createFolderSongElement(song, index, folderOwnerId) {
+            const div = document.createElement('div');
+            div.className = 'folder-song-item p-3 flex justify-between items-center bg-gray-600 border border-gray-500 cursor-move';
+            div.setAttribute('draggable', folderOwnerId === userId); 
+            div.setAttribute('data-song-id', song.songId);
+
+            div.innerHTML = `
+                <div class="flex items-center space-x-3 w-full">
+                    <span class="text-xl font-bold text-gray-400 w-8 text-right">${index}.</span>
+                    <div class="flex-grow">
+                        <p class="font-medium text-lg">${song.songName}</p>
+                        <audio controls class="mt-1 w-full" style="height: 35px;">
+                            <source src="${song.url}" type="audio/mp3">
+                        </audio>
+                    </div>
+                </div>
+                ${folderOwnerId === userId ? `
+                    <button class="remove-from-folder-btn p-2 rounded-full text-white bg-red-700 hover:bg-red-600 transition ml-3" data-song-id="${song.songId}">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                ` : ''}
+            `;
+            lucide.createIcons();
+            
+            const removeBtn = div.querySelector('.remove-from-folder-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    if (confirm("¿Estás seguro de que quieres quitar esta canción de la carpeta?")) {
+                        removeSongFromFolder(currentFolderId, song.songId);
+                    }
+                });
+            }
+
+            return div;
+        }
+
+        let draggedItem = null;
+
+        function setupDragAndDrop(container) {
+            const items = container.querySelectorAll('.folder-song-item');
+
+            items.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = item;
+                    setTimeout(() => item.classList.add('opacity-50'), 0);
+                });
+
+                item.addEventListener('dragend', () => {
+                    draggedItem.classList.remove('opacity-50');
+                    draggedItem = null;
+                });
+
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const boundingBox = item.getBoundingClientRect();
+                    const offset = boundingBox.y + (boundingBox.height / 2);
+                    
+                    if (e.clientY < offset) {
+                        if (item !== draggedItem) {
+                            container.insertBefore(draggedItem, item);
+                            saveOrderBtn.disabled = false;
+                        }
+                    } else {
+                        if (item !== draggedItem) {
+                            container.insertBefore(draggedItem, item.nextSibling);
+                            saveOrderBtn.disabled = false;
+                        }
+                    }
+                });
+            });
+
+            container.addEventListener('dragover', (e) => e.preventDefault());
+        }
+
+        saveOrderBtn.addEventListener('click', async () => {
+            if (!currentFolderId || !db || !userId) return;
+
+            const listItems = document.getElementById('folder-songs-list').querySelectorAll('.folder-song-item');
+            
+            const newSongReferences = Array.from(listItems).map((item, index) => {
+                const songId = item.getAttribute('data-song-id');
+                const existingRef = allFolders.find(f => f.id === currentFolderId)?.songReferences.find(s => s.songId === songId);
+                
+                return {
+                    songId: existingRef.songId,
+                    songName: existingRef.songName,
+                    url: existingRef.url,
+                    order: index + 1 
+                };
+            });
+
+            const folderRef = doc(db, `artifacts/${appId}/public/data/${FOLDER_COLLECTION_NAME}`, currentFolderId);
+
+            try {
+                await updateDoc(folderRef, {
+                    songReferences: newSongReferences
+                });
+
+                displayStatus('¡Orden de carpeta guardado con éxito!', 'bg-green-600', document.getElementById('folder-detail-view'));
+                saveOrderBtn.disabled = true;
+
+            } catch (error) {
+                console.error("Error saving new folder order:", error);
+                displayStatus(`Error al guardar el orden: ${error.message}`, 'bg-red-600', document.getElementById('folder-detail-view'));
+            }
+        });
+        
+        async function removeSongFromFolder(folderId, songId) {
+            if (!folderId || !db || !userId) return;
+            
+            const folder = allFolders.find(f => f.id === folderId);
+            if (!folder || folder.ownerId !== userId) return; 
+
+            try {
+                const newSongReferences = folder.songReferences
+                    .filter(ref => ref.songId !== songId) 
+                    .map((ref, index) => ({ ...ref, order: index + 1 })); 
+
+                const folderRef = doc(db, `artifacts/${appId}/public/data/${FOLDER_COLLECTION_NAME}`, folderId);
+                
+                await updateDoc(folderRef, {
+                    songReferences: newSongReferences
+                });
+
+                displayStatus('Canción eliminada de la carpeta.', 'bg-yellow-600', document.getElementById('folder-detail-view'));
+
+            } catch (error) {
+                console.error("Error removing song from folder:", error);
+                displayStatus(`Error al eliminar la canción: ${error.message}`, 'bg-red-600', document.getElementById('folder-detail-view'));
+            }
+        }
+
+
         // --- INICIALIZACIÓN Y EVENTOS ---
 
-        // Utilidad para copiar al portapapeles
         function copyToClipboard(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -731,7 +1042,6 @@
             document.body.removeChild(textarea);
         }
 
-        // Event Listeners principales
         uploadForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const mp3File = document.getElementById('mp3File').files[0];
@@ -752,26 +1062,21 @@
             uploadForm.reset(); 
         });
 
-        // Listeners para filtros y búsqueda
         searchInput.addEventListener('input', filterAndSortSongs);
         sortRadios.forEach(radio => radio.addEventListener('change', filterAndSortSongs));
 
-        // Listeners para la navegación de vistas
         document.getElementById('nav-home').addEventListener('click', () => showView('home'));
         document.getElementById('nav-folders').addEventListener('click', () => showView('folders'));
 
-        // Listeners para los modales
+        document.getElementById('settings-btn').addEventListener('click', () => showModal('settingsModal')); // Asegurar handler
         document.getElementById('save-nickname-btn').addEventListener('click', () => {
             const nickname = document.getElementById('nickname-input').value;
             saveNickname(nickname);
         });
 
-        document.getElementById('create-folder-btn').addEventListener('click', createFolder);
 
-        // Inicializar la aplicación al cargar la ventana
         window.onload = initFirebase;
         
-        // Inicialización de Firebase (Auth y Firestore)
         async function initFirebase() {
             const config = getFirebaseConfig();
             
@@ -790,7 +1095,7 @@
                 app = initializeApp(config);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('error'); // Configurar el nivel de log
+                setLogLevel('error'); 
 
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
@@ -798,17 +1103,14 @@
                     await signInAnonymously(auth);
                 }
 
-                // Listener de estado de autenticación (Necesario para obtener el userId)
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
                         
-                        // Cargar nickname en el modal
                         const nicknameInput = document.getElementById('nickname-input');
                         const statusElement = document.getElementById('nickname-status');
                         
-                        // 1. Intentar cargar el nickname existente
                         const profileRef = doc(db, `artifacts/${appId}/public/data/${PROFILE_COLLECTION_NAME}`, userId);
                         getDoc(profileRef).then(profileSnap => {
                             if (profileSnap.exists()) {
@@ -825,10 +1127,9 @@
                         uploadButton.classList.add('btn-primary');
                         uploadButton.disabled = false;
                         
-                        // Inicializar listeners
                         setupProfilesListener();
                         setupSongsListener();
-                        setupFoldersListener(); // Inicializar listener de carpetas
+                        setupFoldersListener(); 
                     } else {
                         isAuthReady = true;
                         userId = null;
