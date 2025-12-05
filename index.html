@@ -481,10 +481,10 @@
             formData.append('upload_preset', uploadPreset);
             formData.append('folder', folder);
             
-            // CRÍTICO: Usar el nombre limpio como public_id para que aparezca en la URL final
-            if (slugifiedName) {
+            // CRÍTICO: Usar el nombre limpio como public_id si se proporcionó un nombre personalizado.
+            // NO se puede usar 'overwrite' con un upload preset NO firmado.
+            if (customName) {
                 formData.append('public_id', slugifiedName);
-                formData.append('overwrite', 'true');
             }
             
             uploadButton.textContent = "Uploading..."; 
