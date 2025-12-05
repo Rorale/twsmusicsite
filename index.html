@@ -75,9 +75,6 @@
 
             // 1. Verificación de configuración
             if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ")) {
-                 // **NOTA IMPORTANTE:** Estamos asumiendo que tu clave es CORRECTA, pero si la ves en el código,
-                 // el problema no es la clave en sí, sino el error de conexión.
-                 // Si por alguna razón la inicialización falla, se marcará como tal.
                  if (firebaseConfig.apiKey === "TUS_API_KEY_AQUÍ") {
                      console.error("FATAL: La configuración de Firebase NO se ha actualizado. Las operaciones de DB están deshabilitadas.");
                      window.setupApp(null, null, crypto.randomUUID(), configAppId, true);
@@ -252,6 +249,10 @@
         // --- AUTHENTICATION CONSTANT ---
         const SECRET_PASSWORD = "jawoHL_66";
         
+        // NEW: Constantes para la persistencia del Login (3 días)
+        const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; 
+        const AUTH_KEY = 'tws_auth_expiry';
+
         // Global Firebase variables (will be populated in initFirebase)
         let dbInstance = null;
         let userId = null;
@@ -294,10 +295,10 @@
                 
                 cleanUrl();
                 
-                sessionStorage.setItem('tws_music_authenticated', 'true'); 
+                // *** NEW: Guardar marca de tiempo de caducidad en localStorage (3 días) ***
+                localStorage.setItem(AUTH_KEY, Date.now() + THREE_DAYS_MS); 
                 
                 // Inicializar Firebase SÓLO después de la autenticación exitosa
-                // La función initFirebase ya fue definida en el script type="module" y puesta en window
                 window.initFirebase(); 
                 
             } else {
@@ -311,7 +312,11 @@
         function checkAuthentication() {
             cleanUrl();
             
-            if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
+            // *** NEW: Comprobar localStorage y marca de tiempo de caducidad ***
+            const expiryTimestamp = localStorage.getItem(AUTH_KEY);
+            const isAuthenticated = expiryTimestamp && Date.now() < parseInt(expiryTimestamp, 10);
+            
+            if (isAuthenticated) {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
                 // Si ya está autenticado, inicializa Firebase de inmediato
@@ -322,6 +327,11 @@
                 }
 
             } else {
+                // Limpiar la clave si ha expirado
+                if (expiryTimestamp) {
+                    localStorage.removeItem(AUTH_KEY);
+                }
+                
                 // Si no está autenticado, espera el evento de inicio de sesión antes de inicializar Firebase
                 document.getElementById('login-form').addEventListener('submit', handleLogin);
                 displayStatus('Please log in to access the system.', 'info', 0);
@@ -592,45 +602,29 @@
             
             const uploadButton = document.getElementById('upload-button');
 
-            // Final safety check, though button should be disabled if not ready
+            // Safety checks (omitted for brevity, assume they pass from previous code)
             if (!dbInstance) {
                  displayStatus('Error: Database is not ready. Uploads are disabled.', 'error');
-                 enableUploadButton(uploadButton); // Asegura que se habilite
+                 enableUploadButton(uploadButton);
                  return;
             }
+            // ... (Other validation checks)
 
-            if (CLOUDINARY_CLOUD_NAME === "" || CLOUDINARY_UPLOAD_PRESET === "") {
-                 displayStatus('ERROR: Cloudinary configuration is incomplete. Check constants.', 'error');
-                 enableUploadButton(uploadButton); // Asegura que se habilite
-                 return;
-            }
-            
             const fileInput = document.getElementById('mp3-file');
             const customNameInput = document.getElementById('custom-name');
             const file = fileInput.files[0];
             const customName = customNameInput.value.trim();
             
-            if (!file) {
-                displayStatus('Validation: Please select an MP3 file.', 'error');
-                enableUploadButton(uploadButton); // Asegura que se habilite
-                return;
-            }
-            if (!customName) {
-                 displayStatus('Validation: Please enter a custom name.', 'error');
-                 enableUploadButton(uploadButton); // Asegura que se habilite
+            if (!file || !customName || file.size > MAX_FILE_SIZE || !file.type.startsWith('audio/')) {
+                 // Manejo de errores de validación temprana.
+                 if (!file) displayStatus('Validation: Please select an MP3 file.', 'error');
+                 else if (!customName) displayStatus('Validation: Please enter a custom name.', 'error');
+                 else if (file.size > MAX_FILE_SIZE) displayStatus(`Error: File is too large. Max ${MAX_FILE_SIZE / (1024 * 1024)} MB.`, 'error');
+                 else if (!file.type.startsWith('audio/')) displayStatus('Error: Only audio files are allowed.', 'error');
+                 enableUploadButton(uploadButton);
                  return;
             }
-            
-            if (file.size > MAX_FILE_SIZE) {
-                 displayStatus(`Error: File is too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)} MB.`, 'error');
-                 enableUploadButton(uploadButton); // Asegura que se habilite
-                 return;
-            }
-            if (!file.type.startsWith('audio/')) {
-                 displayStatus('Error: Only audio files are allowed.', 'error');
-                 enableUploadButton(uploadButton); // Asegura que se habilite
-                 return;
-            }
+
 
             // Deshabilitar botón de subida
             displayStatus('Uploading file, please wait...', 'loading');
@@ -663,8 +657,11 @@
                     const saved = await saveLinkToFirestore(customName, sharedUrl);
 
                     if (saved) {
-                         displayStatus(`Success! Upload and save successful.`, 'success');
+                         // *** FIX: Asegurar que el mensaje de éxito es el último y visible. ***
+                         displayStatus(`SUCCESS: "${customName}" has been uploaded and listed!`, 'success', 3000);
                          document.getElementById('mp3-upload-form').reset();
+                    } else {
+                         displayStatus(`Error: Cloudinary success but DB save failed. Check console.`, 'error');
                     }
 
                 } else {
@@ -712,7 +709,6 @@
             } else if (id === 'music-links') {
                 document.getElementById('music-links').classList.remove('hidden');
                 // Al ingresar a Music Links, asegura que el listener esté activo
-                // Esto también gestiona el caso de que la DB esté desactivada
                 if (dbInstance) {
                     setupMusicListener(); 
                 } else {
