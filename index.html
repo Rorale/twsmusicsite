@@ -100,7 +100,7 @@
                 
                 <!-- Botón de Carga/Estado DB -->
                 <button type="submit" id="uploadButton" class="w-full py-3 rounded-lg font-bold text-lg btn-danger" disabled>
-                    DB Configuration REQUIRED
+                    DB Configuration MISSING
                 </button>
 
                 <!-- Mensaje de inicio de sesión -->
@@ -155,6 +155,7 @@
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN DE CLOUDINARY (REQUERIDO) ---
+        // DEBES ASEGURARTE DE QUE ESTOS VALORES SEAN CORRECTOS PARA TU CUENTA DE CLOUDINARY.
         const CLOUDINARY_CONFIG = {
             // "tws_music_uploads" según tu configuración de Cloudinary
             cloudName: "tws_music_uploads", 
@@ -196,11 +197,11 @@
 
         // Función para obtener la configuración (DATOS INSERTADOS AQUÍ)
         function getFirebaseConfig() {
-            // --- CONFIGURACIÓN MANUAL DE FIREBASE INSERTADA ---
+            // --- CONFIGURACIÓN MANUAL DE FIREBASE INSERTADA (BLOQUE PROPORCIONADO POR EL USUARIO) ---
             const YOUR_FIREBASE_CONFIG = {
                 apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ",
                 authDomain: "music-host-site.firebaseapp.com",
-                projectId: "music-host-site", 
+                projectId: "music-host-site",
                 storageBucket: "music-host-site.firebasestorage.app",
                 messagingSenderId: "761480568190",
                 appId: "1:761480568190:web:0b9ff1adbe1843c86f672f",
@@ -208,13 +209,11 @@
             };
             // --- FIN CONFIGURACIÓN MANUAL DE FIREBASE ---
 
-
-            // Si la configuración del entorno existe, la usamos (aunque en este caso la manual tiene prioridad)
+            // Si la configuración del entorno existe, la usamos
             if (firebaseConfigRaw) {
                 try {
                     const envConfig = JSON.parse(firebaseConfigRaw);
-                    // Esto es solo para asegurar que, si el entorno funciona, lo priorice.
-                    if (envConfig && envConfig.apiKey && !YOUR_FIREBASE_CONFIG.apiKey.startsWith("AIzaSy")) {
+                    if (envConfig && envConfig.apiKey) {
                         return envConfig;
                     }
                 } catch (e) {
@@ -222,7 +221,7 @@
                 }
             }
             
-            // Devolver la configuración manual
+            // Devolver la configuración manual proporcionada por el usuario
             return YOUR_FIREBASE_CONFIG;
         }
 
@@ -323,10 +322,6 @@
                 displayStatus("Error: No autenticado.", 'bg-red-600');
                 return;
             }
-
-            // 1. (Opcional pero recomendado) Eliminar de Cloudinary si es necesario
-            // La eliminación sin un servidor es compleja y requiere firmas. 
-            // Aquí solo implementamos la eliminación del REGISTRO de Firestore.
             
             // 2. Eliminar de Firestore
             try {
@@ -459,7 +454,6 @@
                     const cloudinaryId = e.currentTarget.getAttribute('data-cloudinary-id');
                     
                     // Nota: En un entorno real, aquí usarías un modal para confirmar la eliminación.
-                    // Por simplicidad, solo confirmaremos en la consola.
                     if (confirm("¿Estás seguro de que quieres eliminar esta canción? (Solo elimina el registro de la DB)")) {
                         deleteSong(songId, cloudinaryId);
                     }
@@ -495,16 +489,6 @@
         // Inicialización de Firebase (Auth y Firestore)
         async function initFirebase() {
             const config = getFirebaseConfig();
-            
-            // Verificar configuración de Firebase
-            if (!config || config.apiKey.startsWith("AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ")) {
-                uploadButton.textContent = "DB Configuration MISSING";
-                uploadButton.classList.add('btn-danger');
-                uploadButton.disabled = true;
-                loginStatusMessage.textContent = "FATAL: Database Error. Check if configuration is correctly set.";
-                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md font-medium';
-                return;
-            }
             
             // Comprobar configuración de Cloudinary
             if (CLOUDINARY_CONFIG.cloudName === "YOUR_CLOUD_NAME" || CLOUDINARY_CONFIG.uploadPreset === "YOUR_UNSIGNED_UPLOAD_PRESET") {
