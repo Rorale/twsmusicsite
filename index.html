@@ -49,10 +49,12 @@
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
+                        // Pass the DB instance to setupApp
                         window.setupApp(db, auth, userId, appId); 
                     } else {
                         userId = crypto.randomUUID(); 
                         isAuthReady = true;
+                        // Pass the DB instance to setupApp
                         window.setupApp(db, auth, userId, appId);
                     }
                 });
@@ -139,7 +141,7 @@
                 
                 <!-- (9) Upload Note Corrected: Bold and in English -->
                 <p class="text-sm text-center text-red-400 mb-6 font-bold">
-                    Note: Upload is handled by Cloudinary. Max. 40 MB.
+                    Note: Max. file size upload is 40MB. The use of this site is intended for RP purposes only.
                 </p>
 
                 <!-- Upload Form - Password Field REMOVED -->
@@ -165,10 +167,10 @@
                                placeholder="Ex: duty calls">
                     </div>
 
-                    <!-- Upload Button -->
-                    <button type="submit" id="upload-button"
-                            class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition duration-200 shadow-md">
-                        Upload
+                    <!-- Upload Button: DISABLED BY DEFAULT -->
+                    <button type="submit" id="upload-button" disabled
+                            class="w-full py-3 rounded-lg bg-blue-600 text-white font-bold transition duration-200 shadow-md opacity-50 cursor-not-allowed">
+                        Connecting to Database...
                     </button>
                 </form>
 
@@ -240,9 +242,18 @@
         
         // Function to clean the URL bar, removing any query parameters or hash tags
         function cleanUrl() {
-            // Replaces the current state in history without adding a new entry, 
-            // effectively making the URL clean and static (e.g., just https://rorale.github.io/twsmusicsite/)
-            history.replaceState(null, '', window.location.pathname + window.location.search);
+            try {
+                // Intenta limpiar la URL eliminando fragmentos (hashes) y asegurando el path base.
+                // Esta operación puede fallar con un SecurityError si la página se carga desde un blob: URL.
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            } catch (e) {
+                // Ignorar SecurityError ya que es común en entornos seguros (como iframe con blob: URL).
+                if (e.name === 'SecurityError') {
+                    console.warn("SecurityError: No se pudo modificar el historial URL en este contexto seguro. Limpieza omitida.");
+                } else {
+                    console.error("Error inesperado al limpiar la URL:", e);
+                }
+            }
         }
 
         function handleLogin(e) {
@@ -255,13 +266,10 @@
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
                 
-                // 1. Clean URL right after successful login to remove password from history/bar
                 cleanUrl();
                 
-                // Set a session flag
                 sessionStorage.setItem('tws_music_authenticated', 'true'); 
                 
-                // Initialize the rest of the application (which includes Firebase and UI listeners)
                 window.initFirebase(); 
                 
             } else {
@@ -273,27 +281,39 @@
         }
         
         function checkAuthentication() {
-            // Try to clean the URL immediately on load, in case a bad link was used
             cleanUrl();
             
-            // Check if user is already authenticated in this session
             if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
                 window.initFirebase(); 
             } else {
-                // If not authenticated, attach the login handler to the form
                 document.getElementById('login-form').addEventListener('submit', handleLogin);
-                // Initialize Firebase to get the user ID, but the app content remains hidden
                 window.initFirebase(); 
             }
         }
         // --- END AUTHENTICATION & URL CLEANUP LOGIC ---
 
+        // NEW: This function is called once Firebase Auth is resolved and DB instance is available
         window.setupApp = (db, auth, uid, app_id) => {
             dbInstance = db;
             userId = uid;
             appId = app_id;
+            
+            // ----------------------------------------------------------------
+            // CRITICAL FIX: Only enable the upload button when DB is ready
+            // ----------------------------------------------------------------
+            const uploadButton = document.getElementById('upload-button');
+            if (dbInstance) {
+                uploadButton.disabled = false;
+                uploadButton.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-blue-900', 'text-blue-300');
+                uploadButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                uploadButton.textContent = 'Upload';
+                displayStatus('Database connection established. You can now upload files.', 'success', 3000);
+            } else {
+                uploadButton.textContent = 'DB Failed. Check Console.';
+                displayStatus('FATAL: Database instance is NULL after setup.', 'error', 0);
+            }
             
             // Only initialize the application logic if authenticated
             if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
@@ -435,9 +455,25 @@
                     return;
                 }
                 
-                songs.forEach(song => {
+                // --- Manual Sorting Logic (Since orderBy is restricted) ---
+                // We keep orderBy('createdAt', 'desc') in the query for safety, but sort here:
+                let currentSongs = songs;
+                const sortType = document.querySelector('input[name="sort"]:checked').value;
+                
+                if (sortType === 'alpha') {
+                    currentSongs.sort((a, b) => (a.customName || '').localeCompare(b.customName || ''));
+                } else if (sortType === 'oldest') {
+                    // Sort by timestamp (asc)
+                    currentSongs.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+                } else if (sortType === 'newest') {
+                    // Sort by timestamp (desc) - This is the default from the query, but we ensure it
+                    currentSongs.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                }
+
+                currentSongs.forEach(song => {
                     musicListContainer.appendChild(renderMusicItem(song));
                 });
+                // --- End Manual Sorting ---
 
                 setupCopyButtons();
                 displayStatus(`${songs.length} songs list updated.`, 'info', 2000);
@@ -452,6 +488,7 @@
         
         // Function to save the link to Firestore
         async function saveLinkToFirestore(customName, sharedUrl) {
+            // FIX: The check already happens here, but it should be prevented earlier
             if (!dbInstance) {
                  displayStatus('Error: Database is not ready to save.', 'error');
                  return false;
@@ -476,6 +513,12 @@
         // Cloudinary Upload Logic
         async function handleUpload(e) {
             e.preventDefault();
+            
+            // Final safety check, though button should be disabled if not ready
+            if (!dbInstance) {
+                 displayStatus('Error: Database is not ready to save. Please wait for the connection or refresh.', 'error');
+                 return;
+            }
 
             if (CLOUDINARY_CLOUD_NAME === "" || CLOUDINARY_UPLOAD_PRESET === "") {
                  displayStatus('ERROR: Cloudinary configuration is incomplete. Check constants.', 'error');
@@ -486,6 +529,7 @@
             const customNameInput = document.getElementById('custom-name');
             const file = fileInput.files[0];
             const customName = customNameInput.value.trim();
+            const uploadButton = document.getElementById('upload-button');
             
             if (!file) {
                 displayStatus('Validation: Please select an MP3 file.', 'error');
@@ -506,7 +550,9 @@
             }
 
             displayStatus('Uploading file, please wait...', 'loading');
-            document.getElementById('upload-button').disabled = true;
+            uploadButton.disabled = true;
+            uploadButton.classList.add('opacity-50', 'cursor-not-allowed');
+            uploadButton.classList.remove('hover:bg-blue-700');
 
             try {
                 
@@ -545,7 +591,9 @@
                 displayStatus(`Network or Connection Error: ${error.message}`, 'error');
                 console.error("Upload error:", error);
             } finally {
-                document.getElementById('upload-button').disabled = false;
+                uploadButton.disabled = false;
+                uploadButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                uploadButton.classList.add('hover:bg-blue-700');
             }
         }
         
@@ -582,8 +630,9 @@
                 if (dbInstance) { setupMusicListener(); }
             }
             
-            // 2. IMPORTANT: Use history.replaceState to keep the URL static while changing the UI state
-            history.replaceState(null, '', window.location.pathname);
+            // IMPORTANT: Keep the URL static
+            // La limpieza de la URL ya se envuelve en try...catch en cleanUrl()
+            cleanUrl();
 
             // Update the active class in the navigation
             const navLinks = document.querySelectorAll('header nav a');
@@ -598,7 +647,7 @@
         };
 
         function initAppLogic() {
-            displayStatus('Application initialized and ready for Firebase/Cloudinary.', 'info', 3000);
+            // displayStatus('Application initialized and ready for Firebase/Cloudinary.', 'info', 3000);
             
             // Connect the form to the upload function
             document.getElementById('mp3-upload-form').addEventListener('submit', handleUpload);
@@ -611,6 +660,25 @@
                     const sectionId = link.dataset.section;
                     showSection(sectionId);
                 });
+            });
+
+            // Handle sort/search changes
+            const sortingInputs = document.querySelectorAll('input[name="sort"], #search-input');
+            sortingInputs.forEach(input => {
+                // Attach listener to re-run setupMusicListener which handles sorting/filtering internally
+                input.addEventListener('change', () => {
+                    if (document.getElementById('music-links').classList.contains('hidden') === false) {
+                        setupMusicListener();
+                    }
+                });
+                if (input.id === 'search-input') {
+                    // Use input event for real-time search filtering
+                     input.addEventListener('input', () => {
+                        if (document.getElementById('music-links').classList.contains('hidden') === false) {
+                            setupMusicListener();
+                        }
+                    });
+                }
             });
 
             // Show the home page by default
