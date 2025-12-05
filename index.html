@@ -151,51 +151,32 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURACIÓN DE CLOUDINARY (REQUERIDO) ---
+        const CLOUDINARY_CONFIG = {
+            // "tws_music_uploads" según tu configuración de Cloudinary
+            cloudName: "tws_music_uploads", 
+            // Usamos el nombre de la carpeta 'music' como preset, asumiendo que es el preset sin firmar asociado.
+            // Si el nombre del preset es diferente, debe ser cambiado aquí.
+            uploadPreset: "music", 
+            // Carpeta para organizar tus archivos de audio en Cloudinary
+            folder: "music" 
+        };
+        // --- FIN CONFIGURACIÓN CLOUDINARY ---
 
         // Configuración Global y Variables
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         // Variables de Firebase
-        let app, db, auth, storage, userId = null;
+        let app, db, auth, userId = null;
         let isAuthReady = false;
 
-        // --- INICIO DE CONFIGURACIÓN DE FIREBASE ---
-        const FIREBASE_SETTINGS = {
-            // Este objeto DEBE contener la configuración real de tu proyecto
-            config: {
-                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                // !!! LA CLAVE API HA SIDO INSERTADA CORRECTAMENTE !!!
-                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ", 
-                authDomain: "music-host-site.firebaseapp.com",
-                projectId: "music-host-site",
-                storageBucket: "music-host-site.appspot.com",
-                messagingSenderId: "761480568190",
-                appId: "1:761480568190:web:0b9ff1adbe1843c86f672f"
-            },
-            storageCollection: 'uploaded_songs'
-        };
-        // --- FIN DE CONFIGURACIÓN DE FIREBASE ---
-
-        // Función para obtener la configuración final (prioriza la inyectada por el entorno)
-        function getFirebaseConfig() {
-            try {
-                const envConfig = JSON.parse(firebaseConfigRaw);
-                // Si la configuración del entorno es válida y tiene apiKey, la usamos.
-                if (envConfig && envConfig.apiKey && envConfig.apiKey.length > 30 && envConfig.apiKey !== FIREBASE_SETTINGS.config.apiKey) {
-                    return envConfig;
-                }
-            } catch (e) {
-                console.error("Error al parsear la configuración de Firebase del entorno:", e);
-            }
-            // Usamos la configuración manual si el entorno no proporcionó una válida.
-            return FIREBASE_SETTINGS.config;
-        }
+        // --- CONFIGURACIÓN DE FIREBASE/FIRESTORE ---
+        const STORAGE_COLLECTION_NAME = 'uploaded_songs_cloudinary'; // Colección para almacenar metadatos
 
         // Elementos del DOM
         const uploadButton = document.getElementById('uploadButton');
@@ -213,70 +194,149 @@
         let allSongs = [];
         let filteredSongs = [];
 
-        // Inicialización de Firebase
-        async function initFirebase() {
-            const config = getFirebaseConfig();
+        // Función para obtener la configuración (DATOS INSERTADOS AQUÍ)
+        function getFirebaseConfig() {
+            // --- CONFIGURACIÓN MANUAL DE FIREBASE INSERTADA ---
+            const YOUR_FIREBASE_CONFIG = {
+                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ",
+                authDomain: "music-host-site.firebaseapp.com",
+                projectId: "music-host-site", 
+                storageBucket: "music-host-site.firebasestorage.app",
+                messagingSenderId: "761480568190",
+                appId: "1:761480568190:web:0b9ff1adbe1843c86f672f",
+                measurementId: "G-B15CZRFHK5"
+            };
+            // --- FIN CONFIGURACIÓN MANUAL DE FIREBASE ---
+
+
+            // Si la configuración del entorno existe, la usamos (aunque en este caso la manual tiene prioridad)
+            if (firebaseConfigRaw) {
+                try {
+                    const envConfig = JSON.parse(firebaseConfigRaw);
+                    // Esto es solo para asegurar que, si el entorno funciona, lo priorice.
+                    if (envConfig && envConfig.apiKey && !YOUR_FIREBASE_CONFIG.apiKey.startsWith("AIzaSy")) {
+                        return envConfig;
+                    }
+                } catch (e) {
+                    console.error("Error parsing Firebase environment configuration:", e);
+                }
+            }
             
-            // Verificación de la Clave API (El error que estás viendo)
-            if (config.apiKey === "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ") {
-                // Ya no mostramos este error porque la clave ya fue insertada.
-                // Sin embargo, si la configuración del entorno no está, usamos la que insertaste.
+            // Devolver la configuración manual
+            return YOUR_FIREBASE_CONFIG;
+        }
+
+        // Función para mostrar mensajes de estado
+        function displayStatus(message, type = 'bg-blue-800') {
+            uploadStatus.textContent = message;
+            uploadStatus.className = `p-3 rounded-lg text-sm mb-4 font-semibold ${type} text-white`;
+            uploadStatus.classList.remove('hidden');
+            setTimeout(() => {
+                uploadStatus.classList.add('hidden');
+            }, 8000);
+        }
+
+        // Función para subir a Cloudinary y registrar en Firestore
+        async function uploadFileAndSaveMetadata(file, customName) {
+            if (!db || !userId) {
+                displayStatus("Error: No autenticado o DB no inicializada.", 'bg-red-600');
+                return;
             }
 
+            const { cloudName, uploadPreset, folder } = CLOUDINARY_CONFIG;
+            const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', uploadPreset);
+            formData.append('folder', folder);
+            
+            const songName = customName || file.name.split('.').slice(0, -1).join('.');
+
+            uploadButton.textContent = "Uploading (Cloudinary)...";
+            uploadButton.disabled = true;
+
             try {
-                // Desactivar el botón de subida hasta que la autenticación esté lista
-                uploadButton.textContent = "Connecting to DB...";
-                uploadButton.disabled = true;
-
-                // Inicializar servicios
-                app = initializeApp(config);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                storage = getStorage(app);
-                setLogLevel('error'); // Configurar el nivel de log
-
-                // Autenticación
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // Listener de estado de autenticación (Necesario para obtener el userId)
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        loginStatusMessage.textContent = `User ID: ${userId.substring(0, 10)}... (Logged in)`;
-                        loginStatusMessage.className = 'text-center text-sm text-green-400 py-2 rounded-md font-medium';
-                        uploadButton.textContent = "Upload";
-                        uploadButton.classList.remove('btn-danger');
-                        uploadButton.classList.add('btn-primary');
-                        uploadButton.disabled = false;
-                        
-                        // Una vez autenticado, iniciamos el listener de Firestore
-                        setupFirestoreListener();
-                    } else {
-                        // Si el usuario no está autenticado (debería ser raro en este entorno)
-                        isAuthReady = true;
-                        userId = null;
-                        loginStatusMessage.textContent = "Please log in to access the system.";
-                        loginStatusMessage.className = 'text-center text-sm text-gray-400 py-2 rounded-md';
-                        uploadButton.textContent = "DB Configuration REQUIRED";
-                        uploadButton.classList.add('btn-danger');
-                        uploadButton.classList.remove('btn-primary');
-                        uploadButton.disabled = true;
-                    }
+                // 1. Subir a Cloudinary
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
                 });
 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Cloudinary Upload Failed: ${errorData.error.message}`);
+                }
+
+                const data = await response.json();
+                
+                // 2. Guardar metadatos en Firestore (Colección Pública)
+                const collectionPath = `artifacts/${appId}/public/data/${STORAGE_COLLECTION_NAME}`;
+                
+                const songData = {
+                    name: songName,
+                    fileName: file.name,
+                    url: data.secure_url, // URL segura del archivo de audio
+                    uploadedBy: userId,
+                    timestamp: new Date(),
+                    cloudinaryId: data.public_id // ID de Cloudinary para posible eliminación
+                };
+
+                await addDoc(collection(db, collectionPath), songData);
+                
+                displayStatus(`¡"${songName}" subida y registrada con éxito!`, 'bg-green-600');
+
             } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                uploadButton.textContent = "DB Failed. Check Console.";
-                uploadButton.classList.remove('btn-primary');
-                uploadButton.classList.add('btn-danger');
-                uploadButton.disabled = true;
-                loginStatusMessage.textContent = "FATAL: Database instance is NULL after setup.";
-                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md font-medium';
+                console.error("Upload Error:", error);
+                displayStatus(`Error durante la subida o registro: ${error.message || error}`, 'bg-red-600');
+            } finally {
+                uploadButton.textContent = "Upload";
+                uploadButton.disabled = false;
+            }
+        }
+
+        // Event handler para el formulario de subida
+        uploadForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const mp3File = document.getElementById('mp3File').files[0];
+            const customName = document.getElementById('customName').value.trim();
+
+            if (!mp3File) {
+                displayStatus("Por favor, selecciona un archivo MP3.", 'bg-red-600');
+                return;
+            }
+
+            // Validar tamaño máximo (40MB)
+            const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB en bytes
+            if (mp3File.size > MAX_FILE_SIZE) {
+                displayStatus("El archivo excede el límite de 40MB.", 'bg-red-600');
+                return;
+            }
+
+            uploadFileAndSaveMetadata(mp3File, customName);
+            uploadForm.reset(); // Limpiar el formulario
+        });
+
+        // Event handler para la eliminación de una canción
+        async function deleteSong(songId, cloudinaryId) {
+            if (!db || !userId) {
+                displayStatus("Error: No autenticado.", 'bg-red-600');
+                return;
+            }
+
+            // 1. (Opcional pero recomendado) Eliminar de Cloudinary si es necesario
+            // La eliminación sin un servidor es compleja y requiere firmas. 
+            // Aquí solo implementamos la eliminación del REGISTRO de Firestore.
+            
+            // 2. Eliminar de Firestore
+            try {
+                const collectionPath = `artifacts/${appId}/public/data/${STORAGE_COLLECTION_NAME}`;
+                const docRef = doc(db, collectionPath, songId);
+                await deleteDoc(docRef);
+                displayStatus("Canción eliminada del registro.", 'bg-yellow-600');
+            } catch (error) {
+                console.error("Error deleting song from Firestore:", error);
+                displayStatus(`Error eliminando la canción: ${error.message}`, 'bg-red-600');
             }
         }
 
@@ -288,7 +348,7 @@
             musicList.innerHTML = '';
             
             // La colección pública para compartir música
-            const collectionPath = `artifacts/${appId}/public/data/${FIREBASE_SETTINGS.storageCollection}`;
+            const collectionPath = `artifacts/${appId}/public/data/${STORAGE_COLLECTION_NAME}`;
             const q = query(collection(db, collectionPath));
 
             onSnapshot(q, (snapshot) => {
@@ -308,6 +368,7 @@
             }, (error) => {
                 console.error("Error fetching songs:", error);
                 loadingSpinner.classList.add('hidden');
+                displayStatus('Error cargando la lista. Revisa las Reglas de Seguridad de Firestore.', 'bg-yellow-600');
             });
         }
 
@@ -325,7 +386,7 @@
                 );
             }
             
-            // 2. Ordenación
+            // 2. Ordenación (in-memory, sin orderBy en Firestore)
             if (sortOrder === 'alpha') {
                 tempSongs.sort((a, b) => a.name.localeCompare(b.name));
             } else if (sortOrder === 'newest') {
@@ -361,149 +422,156 @@
             div.id = `song-${song.id}`;
 
             const name = song.name || song.fileName;
-            const link = window.location.origin + window.location.pathname + `?file=${encodeURIComponent(song.path)}`;
+            const externalLink = song.url; 
 
             div.innerHTML = `
                 <div class="flex-grow w-full md:w-auto mb-3 md:mb-0">
                     <p class="font-semibold text-lg text-gray-100">${name}</p>
-                    <p class="text-xs text-gray-400">Owner: ${song.ownerId ? song.ownerId.substring(0, 8) : 'Unknown'}</p>
-                    <audio controls class="w-full mt-2"></audio>
+                    <p class="text-xs text-gray-400">Uploaded by: ${song.uploadedBy.substring(0, 8)}...</p>
+                    <p class="text-xs text-gray-400">Date: ${song.timestamp.toLocaleDateString()}</p>
+                    <audio controls class="mt-2 w-full">
+                        <source src="${externalLink}" type="audio/mp3">
+                        Your browser does not support the audio element.
+                    </audio>
                 </div>
-                <div class="flex space-x-2 mt-3 md:mt-0">
-                    <button data-link="${link}" class="copy-btn px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition duration-150">
+                <div class="flex flex-shrink-0 space-x-2">
+                    <button class="copy-btn py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" data-url="${externalLink}">
                         Copy Link
                     </button>
-                    ${song.ownerId === userId ? `
-                    <button data-id="${song.id}" data-path="${song.path}" class="delete-btn px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition duration-150">
-                        Delete
-                    </button>` : ''}
+                    ${song.uploadedBy === userId ? 
+                        `<button class="delete-btn py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" data-id="${song.id}" data-cloudinary-id="${song.cloudinaryId}">
+                            Delete
+                        </button>` 
+                        : ''}
                 </div>
             `;
-            // Establecer la fuente de audio por separado para evitar problemas de CSP
-            div.querySelector('audio').src = song.url;
+
+            // Añadir event listeners para copiar y eliminar
+            div.querySelector('.copy-btn').addEventListener('click', (e) => {
+                const url = e.currentTarget.getAttribute('data-url');
+                copyToClipboard(url);
+            });
+
+            const deleteBtn = div.querySelector('.delete-btn');
+            if (deleteBtn) {
+                 deleteBtn.addEventListener('click', (e) => {
+                    const songId = e.currentTarget.getAttribute('data-id');
+                    const cloudinaryId = e.currentTarget.getAttribute('data-cloudinary-id');
+                    
+                    // Nota: En un entorno real, aquí usarías un modal para confirmar la eliminación.
+                    // Por simplicidad, solo confirmaremos en la consola.
+                    if (confirm("¿Estás seguro de que quieres eliminar esta canción? (Solo elimina el registro de la DB)")) {
+                        deleteSong(songId, cloudinaryId);
+                    }
+                });
+            }
+
             return div;
         }
 
-        // Manejador de eventos para el formulario de subida
-        uploadForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!db || !storage || !userId) {
-                displayStatus('FATAL: Database is not connected.', 'bg-red-500');
-                return;
-            }
-
-            const fileInput = document.getElementById('mp3File');
-            const customNameInput = document.getElementById('customName');
-            const file = fileInput.files[0];
-
-            if (!file) {
-                displayStatus('Please select an MP3 file to upload.', 'bg-red-500');
-                return;
-            }
-
-            if (file.size > 40 * 1024 * 1024) {
-                 displayStatus('Error: File size exceeds the 40MB limit.', 'bg-red-500');
-                 return;
-            }
-
-            const fileName = customNameInput.value || file.name.replace(/\.[^/.]+$/, "");
-            const fileExtension = file.name.split('.').pop();
-            const storagePath = `artifacts/${appId}/public/audio/${crypto.randomUUID()}.${fileExtension}`;
-            
-            uploadButton.textContent = "Uploading...";
-            uploadButton.disabled = true;
-
+        // Utilidad para copiar al portapapeles
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
             try {
-                // 1. Subir a Firebase Storage
-                const sRef = storageRef(storage, storagePath);
-                const uploadTask = await uploadBytes(sRef, file);
-                const downloadURL = await getDownloadURL(uploadTask.ref);
-
-                // 2. Guardar metadata en Firestore (Colección pública)
-                const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/${FIREBASE_SETTINGS.storageCollection}`), {
-                    name: fileName,
-                    fileName: file.name,
-                    url: downloadURL,
-                    path: storagePath, // Necesario para eliminar
-                    ownerId: userId,
-                    timestamp: new Date()
-                });
-
-                displayStatus(`Success! Song "${fileName}" uploaded and link generated.`, 'bg-green-500');
-                uploadForm.reset();
-            } catch (error) {
-                console.error("Upload/Firestore Error:", error);
-                displayStatus(`Error uploading file: ${error.message}`, 'bg-red-500');
-            } finally {
-                uploadButton.textContent = "Upload";
-                uploadButton.disabled = false;
+                document.execCommand('copy');
+                displayStatus('¡Enlace copiado al portapapeles!', 'bg-green-600');
+            } catch (err) {
+                console.error('Error al copiar el texto: ', err);
+                displayStatus('Error al copiar el enlace.', 'bg-red-600');
             }
-        });
+            document.body.removeChild(textarea);
+        }
 
-        // Manejador de eventos para borrar y copiar
-        musicList.addEventListener('click', async (e) => {
-            // Copiar enlace
-            if (e.target.classList.contains('copy-btn')) {
-                const link = e.target.dataset.link;
-                try {
-                    // Usar document.execCommand('copy') como fallback para iframes
-                    const textarea = document.createElement('textarea');
-                    textarea.value = link;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-
-                    e.target.textContent = 'Copied!';
-                    setTimeout(() => { e.target.textContent = 'Copy Link'; }, 2000);
-                } catch (err) {
-                    console.error('Failed to copy link:', err);
-                }
-            }
-
-            // Eliminar canción
-            if (e.target.classList.contains('delete-btn')) {
-                const songId = e.target.dataset.id;
-                const storagePath = e.target.dataset.path;
-                
-                // Usar un modal simple para confirmación (No usar alert/confirm)
-                if (!window.confirm("¿Estás seguro de que quieres eliminar esta canción? Esta acción es permanente.")) return;
-
-                try {
-                    // 1. Eliminar de Storage
-                    const sRef = storageRef(storage, storagePath);
-                    await deleteObject(sRef);
-
-                    // 2. Eliminar de Firestore
-                    const docPath = `artifacts/${appId}/public/data/${FIREBASE_SETTINGS.storageCollection}/${songId}`;
-                    await deleteDoc(doc(db, docPath));
-
-                    displayStatus('Song deleted successfully.', 'bg-green-500');
-                } catch (error) {
-                    console.error("Delete Error:", error);
-                    displayStatus(`Error deleting song: ${error.message}`, 'bg-red-500');
-                }
-            }
-        });
-
-        // Manejadores de eventos para filtrar y ordenar
+        // Event Listeners para filtros y búsqueda
         searchInput.addEventListener('input', filterAndSortSongs);
         sortRadios.forEach(radio => radio.addEventListener('change', filterAndSortSongs));
 
+        // Inicializar la aplicación al cargar la ventana
+        window.onload = initFirebase;
+        
+        // Inicialización de Firebase (Auth y Firestore)
+        async function initFirebase() {
+            const config = getFirebaseConfig();
+            
+            // Verificar configuración de Firebase
+            if (!config || config.apiKey.startsWith("AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ")) {
+                uploadButton.textContent = "DB Configuration MISSING";
+                uploadButton.classList.add('btn-danger');
+                uploadButton.disabled = true;
+                loginStatusMessage.textContent = "FATAL: Database Error. Check if configuration is correctly set.";
+                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md font-medium';
+                return;
+            }
+            
+            // Comprobar configuración de Cloudinary
+            if (CLOUDINARY_CONFIG.cloudName === "YOUR_CLOUD_NAME" || CLOUDINARY_CONFIG.uploadPreset === "YOUR_UNSIGNED_UPLOAD_PRESET") {
+                uploadButton.textContent = "CLOUDINARY CONFIG REQUIRED";
+                uploadButton.classList.remove('btn-primary');
+                uploadButton.classList.add('btn-danger');
+                uploadButton.disabled = true;
+                loginStatusMessage.textContent = "FATAL: Cloudinary must be configured for audio uploads.";
+                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md font-medium';
+                return;
+            }
 
-        // Función de utilidad para mostrar estado
-        function displayStatus(message, className) {
-            uploadStatus.textContent = message;
-            uploadStatus.className = `p-3 rounded-lg text-sm mb-4 ${className} text-white font-semibold`;
-            uploadStatus.classList.remove('hidden');
-            setTimeout(() => {
-                uploadStatus.classList.add('hidden');
-            }, 5000);
+            try {
+                // Desactivar el botón de subida hasta que la autenticación esté lista
+                uploadButton.textContent = "Connecting to DB...";
+                uploadButton.disabled = true;
+
+                // Inicializar servicios
+                app = initializeApp(config);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('error'); // Configurar el nivel de log
+
+                // Autenticación
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listener de estado de autenticación (Necesario para obtener el userId)
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        loginStatusMessage.textContent = `User ID: ${userId} (Logged in)`;
+                        loginStatusMessage.className = 'text-center text-sm text-green-400 py-2 rounded-md font-medium';
+                        uploadButton.textContent = "Upload";
+                        uploadButton.classList.remove('btn-danger');
+                        uploadButton.classList.add('btn-primary');
+                        uploadButton.disabled = false;
+                        
+                        // Una vez autenticado, iniciamos el listener de Firestore
+                        setupFirestoreListener();
+                    } else {
+                        // Si el usuario no está autenticado (debería ser raro en este entorno)
+                        isAuthReady = true;
+                        userId = null;
+                        loginStatusMessage.textContent = "Please log in to access the system.";
+                        loginStatusMessage.className = 'text-center text-sm text-gray-400 py-2 rounded-md';
+                        uploadButton.textContent = "DB Configuration REQUIRED";
+                        uploadButton.classList.add('btn-danger');
+                        uploadButton.classList.remove('btn-primary');
+                        uploadButton.disabled = true;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialization/Authentication Error:", error);
+                uploadButton.textContent = "DB Failed. Check Console.";
+                uploadButton.classList.remove('btn-primary');
+                uploadButton.classList.add('btn-danger');
+                uploadButton.disabled = true;
+                loginStatusMessage.textContent = `FATAL: DB Error. ${error.code || error.message}`;
+                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md font-medium';
+            }
         }
-
-        // Iniciar la aplicación
-        initFirebase();
     </script>
 </body>
 </html>
