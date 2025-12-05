@@ -10,17 +10,22 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Importación de funciones necesarias de Firestore
         import { getFirestore, doc, addDoc, onSnapshot, collection, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         
         // --- Firebase Configuration and Global Variables ---
         setLogLevel('Debug');
         
+        // Exportar las funciones de utilidad de Firestore al ámbito global para que el script principal pueda usarlas.
+        window.dbHelpers = { collection, addDoc, onSnapshot, serverTimestamp };
+        
         // Global variables (provided by the Canvas environment)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        // FIX: Se corrigió la referencia a la variable global '__initial_auth_token'
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        
         let db;
         let auth;
         let userId = 'loading';
@@ -137,7 +142,7 @@
             <div class="container-card w-full max-w-md p-8 rounded-xl">
                 <h2 class="text-2xl font-semibold mb-6 text-center text-white">Upload your MP3s here</h2>
                 
-                <!-- (3) User ID Hidden -->
+                <!-- (3) User ID Displayed for debugging - AHORA SIEMPRE OCULTO -->
                 <p id="user-info" class="text-xs text-center text-gray-500 mb-4 hidden">
                     User ID: Loading...
                 </p>
@@ -306,6 +311,7 @@
             appId = app_id;
             
             const uploadButton = document.getElementById('upload-button');
+            const userInfo = document.getElementById('user-info'); // Referencia al elemento de ID de usuario
             
             if (dbInstance) {
                 // Conexión a DB exitosa
@@ -314,6 +320,11 @@
                 uploadButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
                 uploadButton.textContent = 'Upload';
                 displayStatus('Database connection established. You can now upload files.', 'success', 3000);
+
+                // La línea obligatoria para mostrar el ID de usuario se ha eliminado/comentado a petición del usuario.
+                // Se mantiene el contenido actualizado por si se habilita el modo de depuración.
+                userInfo.textContent = `User ID: ${userId}`;
+                // userInfo.classList.remove('hidden'); // REMOVIDO: A petición del usuario.
             } else {
                 // Conexión a DB fallida (Configuración faltante/inválida o error de autenticación)
                 uploadButton.disabled = true;
@@ -324,7 +335,7 @@
                 
                 const dbStatusMessage = document.getElementById('status-message');
                 // Mensaje de error más específico para el usuario
-                dbStatusMessage.textContent = 'FATAL: Database Error. Check if __firebase_config is correctly set in the environment. Uploads are disabled.';
+                dbStatusMessage.textContent = `FATAL: Database Error. Check if __firebase_config is correctly set in the environment. App ID used: ${appId}. Uploads are disabled.`;
                 dbStatusMessage.classList.remove('hidden');
                 dbStatusMessage.className = 'mt-4 p-3 rounded-lg text-center text-sm font-bold border bg-red-900 text-red-300 border-red-700';
                 
@@ -445,11 +456,13 @@
                 return;
             }
             
+            // Obtener funciones de utilidad de Firestore
+            const { collection, onSnapshot } = window.dbHelpers;
+            
             const musicListContainer = document.getElementById('music-list');
             const collectionRef = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
             
             // Consulta de Firestore (ordenar por descendente de forma predeterminada, ordenar en cliente después de la búsqueda)
-            // Se asume que el índice por 'createdAt' existe. Si no existe, se ordena en cliente.
             let songs = [];
             const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
                 songs = [];
@@ -508,6 +521,10 @@
                  displayStatus('Error: Database is not ready to save.', 'error');
                  return false;
             }
+            
+            // Obtener funciones de utilidad de Firestore
+            const { collection, addDoc, serverTimestamp } = window.dbHelpers;
+            
             try {
                 const path = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
                 await addDoc(path, {
