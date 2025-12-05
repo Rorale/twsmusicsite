@@ -89,7 +89,6 @@
     <div id="main-content-container">
 
         <!-- VISTA 1: HOME & UPLOAD (Contiene la carga y la lista principal) -->
-        <!-- La clase 'hidden' se añade/remueve por showView() -->
         <div id="home-view" class="lg:flex lg:space-x-8">
             <!-- Columna de Carga (Upload) -->
             <div id="upload-card" class="w-full lg:w-1/2 p-6 card mb-8 lg:mb-0">
@@ -163,7 +162,6 @@
             <div id="folders-main-content">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-600 pb-4">
                     <h2 class="text-2xl font-bold text-gray-100">User Folders (Playlists)</h2>
-                    <!-- CORRECCIÓN: Agregar handler onclick para abrir el modal -->
                     <button class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" onclick="showModal('createFolderModal')">
                         <i data-lucide="folder-plus" class="w-5 h-5 inline mr-1"></i> Create New Folder
                     </button>
@@ -220,6 +218,7 @@
             <input type="text" id="nickname-input" class="input-style p-2 w-full mb-4" placeholder="Enter your desired nickname">
             
             <div class="flex justify-end space-x-2">
+                <!-- CORRECCIÓN: Botón "Close" ahora llama a la función para cerrar el modal. -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('settingsModal')">Close</button>
                 <button id="save-nickname-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">Save Nickname</button>
             </div>
@@ -319,8 +318,8 @@
         const saveOrderBtn = document.getElementById('save-order-btn');
         const folderDetailView = document.getElementById('folder-detail-view');
         const foldersMainContent = document.getElementById('folders-main-content');
-        const homeView = document.getElementById('home-view'); // Nuevo
-        const foldersView = document.getElementById('folders-view'); // Nuevo
+        const homeView = document.getElementById('home-view'); 
+        const foldersView = document.getElementById('folders-view'); 
         
         // Estado de la interfaz
         let allSongs = [];
@@ -376,7 +375,7 @@
             document.getElementById(id).classList.add('hidden');
         }
         
-        // CORRECCIÓN: Lógica para alternar las vistas sin superponerse (comportamiento de pestañas)
+        // Lógica para alternar las vistas sin superponerse (comportamiento de pestañas)
         function showView(viewName) {
             homeView.classList.add('hidden');
             foldersView.classList.add('hidden');
@@ -392,9 +391,9 @@
             } else if (viewName.startsWith('folderDetail-')) {
                 const folderId = viewName.split('-')[1];
                 currentFolderId = folderId;
-                foldersView.classList.remove('hidden'); // Mostrar el contenedor de carpetas, pero...
-                foldersMainContent.classList.add('hidden'); // Ocultar la lista de carpetas
-                folderDetailView.classList.remove('hidden'); // Mostrar el detalle
+                foldersView.classList.remove('hidden'); 
+                foldersMainContent.classList.add('hidden'); 
+                folderDetailView.classList.remove('hidden'); 
                 renderFolderDetail(folderId);
             }
 
@@ -411,17 +410,22 @@
         // --- LÓGICA DE NICKNAME ---
 
         async function saveNickname(nickname) {
-            if (!db || !userId) return;
             const statusElement = document.getElementById('nickname-status');
             statusElement.classList.add('hidden');
 
+            if (!db || !userId) {
+                 displayStatus('Error: DB o Usuario no disponible.', 'bg-red-600', statusElement);
+                 return;
+            }
+
             try {
                 const profileRef = doc(db, `artifacts/${appId}/public/data/${PROFILE_COLLECTION_NAME}`, userId);
-                await setDoc(profileRef, { nickname: nickname.trim(), lastUpdate: new Date() });
+                await setDoc(profileRef, { nickname: nickname.trim(), lastUpdate: new Date() }, { merge: true });
                 displayStatus(`Nickname guardado: ${nickname}`, 'bg-green-600', statusElement);
                 userProfiles[userId] = nickname.trim();
                 filterAndSortSongs();
             } catch (error) {
+                // CORRECCIÓN: Aseguramos que el error se muestra en el modal de Settings
                 console.error("Error saving nickname:", error);
                 displayStatus('Error al guardar el nickname.', 'bg-red-600', statusElement);
             }
@@ -446,7 +450,7 @@
             });
         }
         
-        // --- LÓGICA DE SUBIDA DE ARCHIVOS (CORRECCIÓN CLOUDINARY) ---
+        // --- LÓGICA DE SUBIDA DE ARCHIVOS ---
         async function uploadFileAndSaveMetadata(file, customName) {
             if (!db || !userId) {
                 displayStatus("Error: No autenticado o DB no inicializada.", 'bg-red-600');
@@ -457,7 +461,7 @@
             const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
             
             const songName = customName || file.name.split('.').slice(0, -1).join('.');
-            const slugifiedName = slugify(songName); // Nuevo: Nombre limpio para el ID público
+            const slugifiedName = slugify(songName); // Nombre limpio para el ID público
 
             const formData = new FormData();
             formData.append('file', file);
@@ -467,7 +471,6 @@
             // CRÍTICO: Usar el nombre limpio como public_id para que aparezca en la URL final
             if (slugifiedName) {
                 formData.append('public_id', slugifiedName);
-                // Para sobrescribir si ya existe un archivo con ese ID:
                 formData.append('overwrite', 'true');
             }
             
@@ -494,10 +497,10 @@
                 const songData = {
                     name: songName, // Nombre de visualización
                     fileName: file.name,
-                    url: data.secure_url, // Esta URL ahora debería usar el slugifiedName/public_id
+                    url: data.secure_url, 
                     uploadedBy: userId,
                     timestamp: new Date(),
-                    cloudinaryId: data.public_id // Esto ahora será el slugifiedName
+                    cloudinaryId: data.public_id 
                 };
 
                 await addDoc(collection(db, collectionPath), songData);
@@ -1068,7 +1071,7 @@
         document.getElementById('nav-home').addEventListener('click', () => showView('home'));
         document.getElementById('nav-folders').addEventListener('click', () => showView('folders'));
 
-        document.getElementById('settings-btn').addEventListener('click', () => showModal('settingsModal')); // Asegurar handler
+        document.getElementById('settings-btn').addEventListener('click', () => showModal('settingsModal'));
         document.getElementById('save-nickname-btn').addEventListener('click', () => {
             const nickname = document.getElementById('nickname-input').value;
             saveNickname(nickname);
@@ -1103,7 +1106,7 @@
                     await signInAnonymously(auth);
                 }
 
-                onAuthStateChanged(auth, (user) => {
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
@@ -1112,14 +1115,21 @@
                         const statusElement = document.getElementById('nickname-status');
                         
                         const profileRef = doc(db, `artifacts/${appId}/public/data/${PROFILE_COLLECTION_NAME}`, userId);
-                        getDoc(profileRef).then(profileSnap => {
+                        
+                        // CORRECCIÓN: Usar getDoc dentro de onAuthStateChanged para obtener el nickname
+                        try {
+                            const profileSnap = await getDoc(profileRef); 
                             if (profileSnap.exists()) {
                                 nicknameInput.value = profileSnap.data().nickname;
                             } else {
                                 nicknameInput.value = `User-${userId.substring(0, 5)}`;
                                 displayStatus('Set your custom nickname!', 'bg-yellow-600', statusElement);
                             }
-                        });
+                        } catch (error) {
+                             console.error("Error al obtener el perfil inicial:", error);
+                             nicknameInput.value = `User-${userId.substring(0, 5)}`;
+                             displayStatus('Error al cargar nickname de la DB.', 'bg-red-600', statusElement);
+                        }
 
 
                         uploadButton.textContent = "Upload";
