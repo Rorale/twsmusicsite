@@ -7,30 +7,67 @@
     <!-- Carga de Tailwind CSS para el estilizado -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Estilos generales */
-        body { font-family: 'Inter', sans-serif; background-color: #0d1117; color: #c9d1d9; }
+        /* Paleta de colores Oscura */
+        :root {
+            --color-bg-light: #1f2937; /* Fondo oscuro principal */
+            --color-bg-card: #374151; /* Fondo de tarjetas/secundario */
+            --color-text: #f3f4f6; /* Texto claro */
+            --color-input-bg: #4b5563; /* Fondo de inputs */
+            --color-primary: #3b82f6; /* Azul brillante para acciones (Upload) */
+            --color-primary-hover: #2563eb;
+            --color-secondary: #10b981; /* Verde para éxito/copiar */
+            --color-danger: #ef4444; /* Rojo para errores/eliminar */
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--color-bg-light); 
+            color: var(--color-text); 
+        }
         .container { max-width: 90%; margin: 0 auto; padding: 20px; }
-        /* Estilos específicos para la interfaz oscura */
-        .card { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-        .input-style { background-color: #0d1117; border: 1px solid #30363d; color: #c9d1d9; }
-        /* Player styles */
-        audio::-webkit-media-controls-panel { background-color: #21262d; border-radius: 4px; }
-        audio::-webkit-media-controls-play-button { color: #58a6ff; }
+        .card { 
+            background-color: var(--color-bg-card); 
+            border: 1px solid #4b5563; /* Borde sutil */
+            border-radius: 12px; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .input-style { 
+            background-color: var(--color-input-bg); 
+            border: 1px solid #6b7280; 
+            color: var(--color-text);
+            border-radius: 8px;
+        }
         /* Botones de acción */
-        .btn-primary { background-color: #238636; color: white; transition: background-color 0.2s; }
-        .btn-primary:hover { background-color: #2ea043; }
-        .btn-danger { background-color: #891d2d; color: white; cursor: not-allowed; }
-        .btn-danger:hover { background-color: #9a2034; }
+        .btn-primary { background-color: var(--color-primary); color: white; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: var(--color-primary-hover); }
+        .btn-danger { background-color: var(--color-danger); color: white; cursor: not-allowed; transition: background-color 0.2s; }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        /* Player styles */
+        audio::-webkit-media-controls-panel { background-color: #4b5563; border-radius: 8px; }
+        audio { height: 40px; } /* Ajuste de altura */
+
+        /* Estilo para las tarjetas de canciones */
+        .song-item {
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            background-color: #4b5563; /* Más oscuro que el fondo principal para destacar */
+            transition: box-shadow 0.2s;
+        }
+        .song-item:hover {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body class="min-h-screen p-4">
 
     <!-- Navbar -->
-    <header class="flex justify-between items-center py-4 border-b border-gray-700 mb-6">
-        <h1 class="text-3xl font-bold text-gray-100">TWS Music Host Site</h1>
+    <header class="flex justify-between items-center py-4 border-b border-gray-600 mb-6">
+        <h1 class="text-3xl font-extrabold text-gray-100">TWS Music Host Site</h1>
         <nav>
-            <a href="#upload" class="text-blue-400 hover:text-blue-300 mx-2">Home</a>
-            <a href="#links" class="text-blue-400 hover:text-blue-300 mx-2">Music Links</a>
+            <a href="#upload" class="text-blue-400 hover:text-blue-300 mx-2 font-medium">Home</a>
+            <a href="#links" class="text-blue-400 hover:text-blue-300 mx-2 font-medium">Music Links</a>
         </nav>
     </header>
 
@@ -38,31 +75,31 @@
     <div class="lg:flex lg:space-x-8">
 
         <!-- Columna de Carga (Upload) -->
-        <div id="upload" class="w-full lg:w-1/2 p-4 card mb-8 lg:mb-0">
-            <h2 class="text-2xl font-semibold mb-6 text-center">Upload your MP3s here</h2>
+        <div id="upload" class="w-full lg:w-1/2 p-6 card mb-8 lg:mb-0">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-100">Upload your MP3s here</h2>
 
             <!-- Mensaje de error/éxito -->
-            <div id="upload-status" class="hidden p-3 rounded-lg text-sm mb-4" role="alert"></div>
+            <div id="upload-status" class="hidden p-3 rounded-lg text-sm mb-4 font-semibold" role="alert"></div>
 
-            <form id="uploadForm" class="space-y-4">
-                <p class="text-red-400 text-sm font-bold">
+            <form id="uploadForm" class="space-y-6">
+                <p class="text-red-400 text-sm font-semibold">
                     Note: Max. file size upload is 40MB. The use of this site is intended for RP purposes only.
                 </p>
 
                 <!-- Campo de archivo -->
                 <div>
-                    <label for="mp3File" class="block text-sm font-medium mb-1">Choose MP3 File</label>
-                    <input type="file" id="mp3File" accept="audio/mp3" required class="input-style p-2 w-full rounded-md cursor-pointer">
+                    <label for="mp3File" class="block text-sm font-medium mb-1 text-gray-300">Choose MP3 File</label>
+                    <input type="file" id="mp3File" accept="audio/mp3" required class="input-style p-3 w-full rounded-lg cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-800 file:text-blue-200 hover:file:bg-blue-700">
                 </div>
 
                 <!-- Campo de nombre personalizado -->
                 <div>
-                    <label for="customName" class="block text-sm font-medium mb-1">Custom Name</label>
-                    <input type="text" id="customName" placeholder="Ex: duty calls" class="input-style p-2 w-full rounded-md">
+                    <label for="customName" class="block text-sm font-medium mb-1 text-gray-300">Custom Name</label>
+                    <input type="text" id="customName" placeholder="Ex: duty calls" class="input-style p-3 w-full rounded-lg">
                 </div>
                 
                 <!-- Botón de Carga/Estado DB -->
-                <button type="submit" id="uploadButton" class="w-full py-3 rounded-md font-bold text-lg btn-danger" disabled>
+                <button type="submit" id="uploadButton" class="w-full py-3 rounded-lg font-bold text-lg btn-danger" disabled>
                     DB Configuration REQUIRED
                 </button>
 
@@ -74,24 +111,24 @@
         </div>
 
         <!-- Columna de Enlaces de Música (Music Links) -->
-        <div id="links" class="w-full lg:w-1/2 p-4 card">
-            <h2 class="text-2xl font-semibold mb-6 text-center">Uploaded Music Links</h2>
+        <div id="links" class="w-full lg:w-1/2 p-6 card">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-100">Uploaded Music Links</h2>
             
             <div id="loading-spinner" class="hidden text-center py-10">
-                <div class="animate-spin inline-block w-8 h-8 border-4 border-t-4 border-blue-500 border-opacity-25 rounded-full"></div>
+                <div class="animate-spin inline-block w-8 h-8 border-4 border-t-4 border-blue-400 border-opacity-25 rounded-full"></div>
                 <p class="text-blue-400 mt-2">Cargando canciones...</p>
             </div>
 
             <!-- Contador de canciones -->
-            <p class="text-right text-gray-400 mb-4">Total: <span id="song-count">0</span> songs</p>
+            <p class="text-right text-gray-400 mb-4">Total: <span id="song-count" class="font-bold">0</span> songs</p>
 
             <!-- Filtros y Búsqueda -->
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
-                <input type="text" id="search-input" placeholder="Search song by name..." class="input-style p-2 rounded-md w-full sm:w-2/3">
-                <div class="flex space-x-2 text-sm">
-                    <label><input type="radio" name="sort" value="alpha" checked> Alphabetical</label>
-                    <label><input type="radio" name="sort" value="newest"> Newest</label>
-                    <label><input type="radio" name="sort" value="oldest"> Oldest</label>
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0 sm:space-x-4">
+                <input type="text" id="search-input" placeholder="Search song by name..." class="input-style p-3 rounded-lg w-full sm:w-2/3">
+                <div class="flex space-x-2 text-sm text-gray-300 font-medium">
+                    <label><input type="radio" name="sort" value="alpha" checked class="text-blue-400"> Alphabetical</label>
+                    <label><input type="radio" name="sort" value="newest" class="text-blue-400"> Newest</label>
+                    <label><input type="radio" name="sort" value="oldest" class="text-blue-400"> Oldest</label>
                 </div>
             </div>
 
@@ -106,7 +143,7 @@
     </div>
     
     <!-- Footer -->
-    <footer class="mt-8 pt-4 text-center text-sm text-gray-500 border-t border-gray-800">
+    <footer class="mt-8 pt-4 text-center text-sm text-gray-400 border-t border-gray-600">
         &copy; 2025 by Rorale. All rights reserved.
     </footer>
 
@@ -132,9 +169,9 @@
             // Este objeto DEBE contener la configuración real de tu proyecto
             config: {
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                // !!! CLAVE CRÍTICA: DEBES REEMPLAZAR "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ" CON TU CLAVE REAL DE FIREBASE PROJECT SETTINGS !!!
+                // !!! LA CLAVE API HA SIDO INSERTADA CORRECTAMENTE !!!
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ", // <-- ¡¡¡MARCADOR!!!
+                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ", 
                 authDomain: "music-host-site.firebaseapp.com",
                 projectId: "music-host-site",
                 storageBucket: "music-host-site.appspot.com",
@@ -181,16 +218,9 @@
             const config = getFirebaseConfig();
             
             // Verificación de la Clave API (El error que estás viendo)
-            if (config.apiKey === FIREBASE_SETTINGS.config.apiKey) {
-                const msg = "FATAL: Database configuration is incomplete. Please check 'Web API Key' in Project Settings.";
-                uploadStatus.className = 'p-3 rounded-lg text-sm mb-4 bg-red-800 text-white';
-                uploadStatus.innerHTML = msg;
-                uploadStatus.classList.remove('hidden');
-                uploadButton.textContent = "DB Failed. Check Console.";
-                uploadButton.classList.remove('btn-primary');
-                uploadButton.classList.add('btn-danger');
-                console.error(msg);
-                return; 
+            if (config.apiKey === "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ") {
+                // Ya no mostramos este error porque la clave ya fue insertada.
+                // Sin embargo, si la configuración del entorno no está, usamos la que insertaste.
             }
 
             try {
@@ -218,6 +248,7 @@
                         userId = user.uid;
                         isAuthReady = true;
                         loginStatusMessage.textContent = `User ID: ${userId.substring(0, 10)}... (Logged in)`;
+                        loginStatusMessage.className = 'text-center text-sm text-green-400 py-2 rounded-md font-medium';
                         uploadButton.textContent = "Upload";
                         uploadButton.classList.remove('btn-danger');
                         uploadButton.classList.add('btn-primary');
@@ -230,6 +261,7 @@
                         isAuthReady = true;
                         userId = null;
                         loginStatusMessage.textContent = "Please log in to access the system.";
+                        loginStatusMessage.className = 'text-center text-sm text-gray-400 py-2 rounded-md';
                         uploadButton.textContent = "DB Configuration REQUIRED";
                         uploadButton.classList.add('btn-danger');
                         uploadButton.classList.remove('btn-primary');
@@ -244,7 +276,7 @@
                 uploadButton.classList.add('btn-danger');
                 uploadButton.disabled = true;
                 loginStatusMessage.textContent = "FATAL: Database instance is NULL after setup.";
-                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md';
+                loginStatusMessage.className = 'text-center text-sm text-red-400 py-2 rounded-md font-medium';
             }
         }
 
@@ -325,7 +357,7 @@
         // Creación de elemento de canción
         function createSongElement(song) {
             const div = document.createElement('div');
-            div.className = 'p-3 bg-gray-800 rounded-lg flex flex-col md:flex-row justify-between items-center';
+            div.className = 'song-item p-3 flex flex-col md:flex-row justify-between items-center';
             div.id = `song-${song.id}`;
 
             const name = song.name || song.fileName;
@@ -333,23 +365,22 @@
 
             div.innerHTML = `
                 <div class="flex-grow w-full md:w-auto mb-3 md:mb-0">
-                    <p class="font-semibold text-lg">${name}</p>
+                    <p class="font-semibold text-lg text-gray-100">${name}</p>
                     <p class="text-xs text-gray-400">Owner: ${song.ownerId ? song.ownerId.substring(0, 8) : 'Unknown'}</p>
-                    <audio controls class="w-full mt-2">
-                        <source src="${song.url}" type="audio/mp3">
-                        Tu navegador no soporta el elemento de audio.
-                    </audio>
+                    <audio controls class="w-full mt-2"></audio>
                 </div>
                 <div class="flex space-x-2 mt-3 md:mt-0">
-                    <button data-link="${link}" class="copy-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition duration-150">
+                    <button data-link="${link}" class="copy-btn px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition duration-150">
                         Copy Link
                     </button>
                     ${song.ownerId === userId ? `
-                    <button data-id="${song.id}" data-path="${song.path}" class="delete-btn px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition duration-150">
+                    <button data-id="${song.id}" data-path="${song.path}" class="delete-btn px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition duration-150">
                         Delete
                     </button>` : ''}
                 </div>
             `;
+            // Establecer la fuente de audio por separado para evitar problemas de CSP
+            div.querySelector('audio').src = song.url;
             return div;
         }
 
@@ -358,7 +389,7 @@
             e.preventDefault();
             
             if (!db || !storage || !userId) {
-                displayStatus('FATAL: Database is not connected.', 'bg-red-800');
+                displayStatus('FATAL: Database is not connected.', 'bg-red-500');
                 return;
             }
 
@@ -367,12 +398,12 @@
             const file = fileInput.files[0];
 
             if (!file) {
-                displayStatus('Please select an MP3 file to upload.', 'bg-red-800');
+                displayStatus('Please select an MP3 file to upload.', 'bg-red-500');
                 return;
             }
 
             if (file.size > 40 * 1024 * 1024) {
-                 displayStatus('Error: File size exceeds the 40MB limit.', 'bg-red-800');
+                 displayStatus('Error: File size exceeds the 40MB limit.', 'bg-red-500');
                  return;
             }
 
@@ -399,11 +430,11 @@
                     timestamp: new Date()
                 });
 
-                displayStatus(`Success! Song "${fileName}" uploaded and link generated.`, 'bg-green-700');
+                displayStatus(`Success! Song "${fileName}" uploaded and link generated.`, 'bg-green-500');
                 uploadForm.reset();
             } catch (error) {
                 console.error("Upload/Firestore Error:", error);
-                displayStatus(`Error uploading file: ${error.message}`, 'bg-red-800');
+                displayStatus(`Error uploading file: ${error.message}`, 'bg-red-500');
             } finally {
                 uploadButton.textContent = "Upload";
                 uploadButton.disabled = false;
@@ -448,10 +479,10 @@
                     const docPath = `artifacts/${appId}/public/data/${FIREBASE_SETTINGS.storageCollection}/${songId}`;
                     await deleteDoc(doc(db, docPath));
 
-                    displayStatus('Song deleted successfully.', 'bg-green-700');
+                    displayStatus('Song deleted successfully.', 'bg-green-500');
                 } catch (error) {
                     console.error("Delete Error:", error);
-                    displayStatus(`Error deleting song: ${error.message}`, 'bg-red-800');
+                    displayStatus(`Error deleting song: ${error.message}`, 'bg-red-500');
                 }
             }
         });
@@ -464,7 +495,7 @@
         // Función de utilidad para mostrar estado
         function displayStatus(message, className) {
             uploadStatus.textContent = message;
-            uploadStatus.className = `p-3 rounded-lg text-sm mb-4 ${className} text-white`;
+            uploadStatus.className = `p-3 rounded-lg text-sm mb-4 ${className} text-white font-semibold`;
             uploadStatus.classList.remove('hidden');
             setTimeout(() => {
                 uploadStatus.classList.add('hidden');
