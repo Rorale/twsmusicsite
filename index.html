@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TWS Music Host Site</title>
+    <!-- Carga de Tailwind CSS para el estilo -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Firebase SDK para la base de datos (Firestore) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, onSnapshot, collection, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         
-        // --- Configuraciones de Firebase y Variables Globales ---
+        // --- Firebase Configuration and Global Variables ---
         setLogLevel('Debug');
         
-        // Variables globales (proporcionadas por el entorno de Canvas)
+        // Global variables (provided by the Canvas environment)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -24,10 +26,12 @@
         let userId = 'loading';
         let isAuthReady = false;
 
-        // Inicialización y Autenticación de Firebase
+        // Firebase Initialization and Authentication
         const initFirebase = async () => {
             if (Object.keys(firebaseConfig).length === 0) {
                  console.error("Firebase is not configured. Database functionality will not work.");
+                 // Proceed without DB initialization if config is empty
+                 window.setupApp(null, null, crypto.randomUUID(), appId);
                  return;
             }
             try {
@@ -45,13 +49,11 @@
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
-                        // console.log("User authenticated. UID:", userId); // Oculto para evitar registro en consola
                         window.setupApp(db, auth, userId, appId); 
                     } else {
                         userId = crypto.randomUUID(); 
                         isAuthReady = true;
-                        window.setupApp(null, null, userId, appId);
-                        // console.log("Anonymous session started. Generated ID:", userId); // Oculto para evitar registro en consola
+                        window.setupApp(db, auth, userId, appId);
                     }
                 });
 
@@ -88,103 +90,140 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col" onload="window.initFirebase()">
+<body class="min-h-screen flex flex-col" onload="checkAuthentication()">
 
-    <header class="bg-[#1f262e] border-b border-[#30363d] py-3 px-6 shadow-lg">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold text-white">TWS Music Host Site</h1>
-            <nav>
-                <a href="#home" id="nav-home" class="text-blue-400 hover:text-blue-300 font-semibold mr-4">Home</a>
-                <a href="#music-links" id="nav-links" class="text-gray-400 hover:text-white">Music Links</a>
-            </nav>
-        </div>
-    </header>
-
-    <main id="home" class="flex-grow flex items-center justify-center p-6">
-        <div class="container-card w-full max-w-md p-8 rounded-xl">
-            <h2 class="text-2xl font-semibold mb-6 text-center text-white">Upload your MP3s here</h2>
+    <!-- 1. LOGIN SCREEN - Visible by default -->
+    <section id="login-screen" class="min-h-screen flex items-center justify-center p-6">
+        <div class="container-card w-full max-w-sm p-8 rounded-xl text-center">
+            <h2 class="text-3xl font-bold mb-6 text-white">TWS Music Host Site</h2>
+            <p class="text-gray-400 mb-6">Enter password to access the system.</p>
             
-            <p id="user-info" class="text-xs text-center text-gray-500 mb-4 hidden">
-                User ID: Loading...
-            </p>
-            
-            <p class="text-sm text-center text-red-400 mb-6 font-bold">
-                Note: Upload is handled by Cloudinary. Max. 40 MB.
-            </p>
-
-            <form id="mp3-upload-form" class="space-y-6">
-                
+            <form id="login-form" class="space-y-4">
                 <div>
-                    <label for="password" class="block text-sm font-medium mb-1">Password (Authentication)</label>
-                    <input type="password" id="password" name="password" 
-                           class="w-full px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
-                           placeholder="Enter access password">
+                    <input type="password" id="access-password" name="access-password" required
+                           class="w-full px-4 py-3 rounded-lg bg-[#21262d] border border-[#30363d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
+                           placeholder="Enter password">
                 </div>
-
-                <div>
-                    <label for="mp3-file" class="block text-sm font-medium mb-1">Choose MP3 File</label>
-                    <input type="file" id="mp3-file" name="mp3-file" accept="audio/mp3, audio/mpeg" required
-                           class="w-full text-sm text-gray-400
-                           file:mr-4 file:py-2 file:px-4
-                           file:rounded-full file:border-0
-                           file:text-sm file:font-semibold
-                           file:bg-blue-600 file:text-white
-                           hover:file:bg-blue-700">
-                </div>
-
-                <div>
-                    <label for="custom-name" class="block text-sm font-medium mb-1">Custom Name</label>
-                    <input type="text" id="custom-name" name="custom-name" required
-                           class="w-full px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
-                           placeholder="Ex: duty calls">
-                </div>
-
-                <button type="submit" id="upload-button"
+                <button type="submit" 
                         class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition duration-200 shadow-md">
-                    Upload
+                    Access Site
                 </button>
             </form>
-
-            <div id="status-message" class="mt-4 text-center text-sm font-medium hidden"></div>
-
-            <div class="mt-6 pt-4 border-t border-[#30363d] hidden">
-                <h3 class="text-sm font-semibold mb-2 text-gray-400">Activity/Error Log</h3>
-                <div id="activity-log" class="max-h-40 overflow-y-auto space-y-1 p-2 rounded-lg bg-[#21262d] text-xs flex flex-col-reverse">
-                    <p class="text-gray-500">Application log initialized.</p>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <section id="music-links" class="hidden flex-grow flex justify-center p-6">
-        <div class="container-card w-full max-w-4xl p-8 rounded-xl h-full flex flex-col">
-            <h2 class="text-2xl font-semibold mb-6 text-center text-white">Uploaded Music Links</h2>
-            <p id="song-count" class="text-sm text-gray-500 mb-4 text-center">Total: Loading...</p>
-            
-            <div class="mb-6 flex flex-col sm:flex-row justify-between items-center">
-                <input type="text" id="search-input" placeholder="Search song by name..."
-                       class="w-full sm:flex-grow px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] text-white placeholder-gray-500 mb-4 sm:mb-0 sm:mr-4">
-                <div class="flex space-x-4 text-sm whitespace-nowrap">
-                    <label><input type="radio" name="sort" value="alpha" id="sort-alpha" class="mr-1"> Alphabetical</label>
-                    <label><input type="radio" name="sort" value="newest" id="sort-newest" checked class="mr-1"> Newest</label>
-                    <label><input type="radio" name="sort" value="oldest" id="sort-oldest" class="mr-1"> Oldest</label>
-                </div>
-            </div>
-            
-            <div id="music-list" class="space-y-3 flex-grow overflow-y-auto pr-2">
-                <p id="list-status" class="text-center text-gray-500">Loading music links...</p>
-            </div>
-
+            <div id="login-message" class="mt-4 text-sm font-medium text-red-400 hidden"></div>
         </div>
     </section>
-    
-    <footer class="bg-[#1f262e] border-t border-[#30363d] py-3 px-6 text-center text-xs text-gray-500">
-        &copy; 2025 by Renton. All rights reserved.
-    </footer>
 
+    <!-- 2. MAIN APPLICATION CONTENT - Hidden by default -->
+    <div id="main-app-content" class="hidden min-h-screen flex flex-col">
+        <!-- Fixed Header -->
+        <header class="bg-[#1f262e] border-b border-[#30363d] py-3 px-6 shadow-lg">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold text-white">TWS Music Host Site</h1>
+                <nav>
+                    <!-- Nav links modified to use data-section instead of href #tags for static URL -->
+                    <a href="#" data-section="home" id="nav-home" class="text-blue-400 hover:text-blue-300 font-semibold mr-4">Home</a>
+                    <a href="#" data-section="music-links" id="nav-links" class="text-gray-400 hover:text-white">Music Links</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content: Uploader (Home Tab) -->
+        <main id="home" class="flex-grow flex items-center justify-center p-6">
+            <div class="container-card w-full max-w-md p-8 rounded-xl">
+                <h2 class="text-2xl font-semibold mb-6 text-center text-white">Upload your MP3s here</h2>
+                
+                <!-- (3) User ID Hidden -->
+                <p id="user-info" class="text-xs text-center text-gray-500 mb-4 hidden">
+                    User ID: Loading...
+                </p>
+                
+                <!-- (9) Upload Note Corrected: Bold and in English -->
+                <p class="text-sm text-center text-red-400 mb-6 font-bold">
+                    Note: Upload is handled by Cloudinary. Max. 40 MB.
+                </p>
+
+                <!-- Upload Form - Password Field REMOVED -->
+                <form id="mp3-upload-form" class="space-y-6">
+
+                    <!-- MP3 File Selection -->
+                    <div>
+                        <label for="mp3-file" class="block text-sm font-medium mb-1">Choose MP3 File</label>
+                        <input type="file" id="mp3-file" name="mp3-file" accept="audio/mp3, audio/mpeg" required
+                               class="w-full text-sm text-gray-400
+                               file:mr-4 file:py-2 file:px-4
+                               file:rounded-full file:border-0
+                               file:text-sm file:font-semibold
+                               file:bg-blue-600 file:text-white
+                               hover:file:bg-blue-700">
+                    </div>
+
+                    <!-- Custom Name -->
+                    <div>
+                        <label for="custom-name" class="block text-sm font-medium mb-1">Custom Name</label>
+                        <input type="text" id="custom-name" name="custom-name" required
+                               class="w-full px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
+                               placeholder="Ex: duty calls">
+                    </div>
+
+                    <!-- Upload Button -->
+                    <button type="submit" id="upload-button"
+                            class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition duration-200 shadow-md">
+                        Upload
+                    </button>
+                </form>
+
+                <!-- Temporary Status Message Area -->
+                <div id="status-message" class="mt-4 text-center text-sm font-medium hidden"></div>
+
+                <!-- (5) Hidden Activity Log (Internal Log) -->
+                <div class="mt-6 pt-4 border-t border-[#30363d] hidden">
+                    <h3 class="text-sm font-semibold mb-2 text-gray-400">Activity/Error Log</h3>
+                    <div id="activity-log" class="max-h-40 overflow-y-auto space-y-1 p-2 rounded-lg bg-[#21262d] text-xs flex flex-col-reverse">
+                        <p class="text-gray-500">Application log initialized.</p>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Music Links Section (Music Links Tab) -->
+        <section id="music-links" class="hidden flex-grow flex justify-center p-6">
+            <div class="container-card w-full max-w-4xl p-8 rounded-xl h-full flex flex-col">
+                <h2 class="text-2xl font-semibold mb-6 text-center text-white">Uploaded Music Links</h2>
+                <p id="song-count" class="text-sm text-gray-500 mb-4 text-center">Total: Loading...</p>
+                
+                <div class="mb-6 flex flex-col sm:flex-row justify-between items-center">
+                    <input type="text" id="search-input" placeholder="Search song by name..."
+                        class="w-full sm:flex-grow px-4 py-2 rounded-lg bg-[#21262d] border border-[#30363d] text-white placeholder-gray-500 mb-4 sm:mb-0 sm:mr-4">
+                    <div class="flex space-x-4 text-sm whitespace-nowrap">
+                        <label><input type="radio" name="sort" value="alpha" id="sort-alpha" class="mr-1"> Alphabetical</label>
+                        <label><input type="radio" name="sort" value="newest" id="sort-newest" checked class="mr-1"> Newest</label>
+                        <label><input type="radio" name="sort" value="oldest" id="sort-oldest" class="mr-1"> Oldest</label>
+                    </div>
+                </div>
+                
+                <!-- Container where the actual music list will be rendered -->
+                <div id="music-list" class="space-y-3 flex-grow overflow-y-auto pr-2">
+                    <!-- List elements will be injected here by JavaScript -->
+                    <p id="list-status" class="text-center text-gray-500">Loading music links...</p>
+                </div>
+
+            </div>
+        </section>
+        
+        <!-- Fixed Footer -->
+        <footer class="bg-[#1f262e] border-t border-[#30363d] py-3 px-6 text-center text-xs text-gray-500">
+            &copy; 2025-2026 Made by Rorale. All rights reserved. Hosted for the TWS Enforcement Bureau Team
+        </footer>
+    </div>
+
+
+    <!-- Main JavaScript logic for application handling -->
     <script>
-        // Variables globales de Firebase (se poblarán en initFirebase)
+        // --- AUTHENTICATION CONSTANT ---
+        const SECRET_PASSWORD = "jawoHL_66";
+        
+        // Global Firebase variables (will be populated in initFirebase)
         let dbInstance = null;
         let userId = null;
         let appId = null;
@@ -197,14 +236,69 @@
         const CLOUDINARY_UPLOAD_PRESET = "tws_music_uploads"; 
         const PUBLIC_MUSIC_COLLECTION_PATH = 'public/data/music_links'; 
 
+        // --- AUTHENTICATION & URL CLEANUP LOGIC ---
+        
+        // Function to clean the URL bar, removing any query parameters or hash tags
+        function cleanUrl() {
+            // Replaces the current state in history without adding a new entry, 
+            // effectively making the URL clean and static (e.g., just https://rorale.github.io/twsmusicsite/)
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const inputPassword = document.getElementById('access-password').value;
+            const loginMessage = document.getElementById('login-message');
+            
+            if (inputPassword === SECRET_PASSWORD) {
+                loginMessage.classList.add('hidden');
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app-content').classList.remove('hidden');
+                
+                // 1. Clean URL right after successful login to remove password from history/bar
+                cleanUrl();
+                
+                // Set a session flag
+                sessionStorage.setItem('tws_music_authenticated', 'true'); 
+                
+                // Initialize the rest of the application (which includes Firebase and UI listeners)
+                window.initFirebase(); 
+                
+            } else {
+                loginMessage.textContent = 'Invalid Password. Access Denied.';
+                loginMessage.classList.remove('hidden');
+                document.getElementById('access-password').value = '';
+                document.getElementById('access-password').focus();
+            }
+        }
+        
+        function checkAuthentication() {
+            // Try to clean the URL immediately on load, in case a bad link was used
+            cleanUrl();
+            
+            // Check if user is already authenticated in this session
+            if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app-content').classList.remove('hidden');
+                window.initFirebase(); 
+            } else {
+                // If not authenticated, attach the login handler to the form
+                document.getElementById('login-form').addEventListener('submit', handleLogin);
+                // Initialize Firebase to get the user ID, but the app content remains hidden
+                window.initFirebase(); 
+            }
+        }
+        // --- END AUTHENTICATION & URL CLEANUP LOGIC ---
+
         window.setupApp = (db, auth, uid, app_id) => {
             dbInstance = db;
             userId = uid;
             appId = app_id;
             
-            // document.getElementById('user-info').textContent = `User ID: ${userId}`; // Elemento oculto
-            
-            initAppLogic();
+            // Only initialize the application logic if authenticated
+            if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
+                 initAppLogic();
+            }
         };
 
         function displayStatus(message, type = 'info', duration = 5000) { 
@@ -309,7 +403,7 @@
             return div;
         }
 
-        // Lógica de Renderizado y Escucha de Firestore (Puntos 7 y 10)
+        // Firestore Listener Logic 
         function setupMusicListener() {
             if (!dbInstance) {
                 document.getElementById('list-status').textContent = 'Error: Database not available. Please refresh the page.';
@@ -320,15 +414,16 @@
             const musicListContainer = document.getElementById('music-list');
             const collectionRef = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
             
+            // IMPORTANT: Firestore query uses 'desc' (newest first)
             const musicQuery = query(collectionRef, orderBy('createdAt', 'desc'));
             
-            // Esta función maneja la actualización de la lista en tiempo real
+            // This function handles real-time list updates
             const unsubscribe = onSnapshot(musicQuery, (snapshot) => {
                 const songs = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     if (data.sharedUrl) {
-                        songs.push(data);
+                        songs.push({ id: doc.id, ...data });
                     }
                 });
 
@@ -355,7 +450,7 @@
             return unsubscribe;
         }
         
-        // Función para guardar el enlace en Firestore (Punto 8)
+        // Function to save the link to Firestore
         async function saveLinkToFirestore(customName, sharedUrl) {
             if (!dbInstance) {
                  displayStatus('Error: Database is not ready to save.', 'error');
@@ -369,7 +464,7 @@
                     uploadedBy: userId, 
                     createdAt: serverTimestamp() 
                 });
-                displayStatus(`Successfully saved to Firestore. Name: ${customName}`, 'success', 3000); // Cambiado a success
+                displayStatus(`Successfully saved to Firestore. Name: ${customName}`, 'success', 3000); 
                 return true;
             } catch (error) {
                 console.error("Error saving link to Firestore:", error);
@@ -378,7 +473,7 @@
             }
         }
 
-        // Lógica de Subida a Cloudinary (Punto 8)
+        // Cloudinary Upload Logic
         async function handleUpload(e) {
             e.preventDefault();
 
@@ -414,6 +509,7 @@
             document.getElementById('upload-button').disabled = true;
 
             try {
+                
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -473,7 +569,7 @@
             });
         }
 
-        // Lógica de Navegación de Pestañas (Punto 7)
+        // Tab Navigation Logic
         const showSection = (id) => {
             document.getElementById('home').classList.add('hidden');
             document.getElementById('music-links').classList.add('hidden');
@@ -482,16 +578,19 @@
                 document.getElementById('home').classList.remove('hidden');
             } else if (id === 'music-links') {
                 document.getElementById('music-links').classList.remove('hidden');
-                // Al entrar a Music Links, aseguramos que el listener esté activo
+                // When entering Music Links, ensure the listener is active
                 if (dbInstance) { setupMusicListener(); }
             }
             
-            // Actualizar la clase activa en la navegación
+            // 2. IMPORTANT: Use history.replaceState to keep the URL static while changing the UI state
+            history.replaceState(null, '', window.location.pathname);
+
+            // Update the active class in the navigation
             const navLinks = document.querySelectorAll('header nav a');
             navLinks.forEach(link => {
                 link.classList.remove('text-blue-400', 'font-semibold', 'hover:text-blue-300');
                 link.classList.add('text-gray-400', 'hover:text-white');
-                if (link.getAttribute('href') === '#' + id) {
+                if (link.dataset.section === id) {
                     link.classList.add('text-blue-400', 'font-semibold', 'hover:text-blue-300');
                     link.classList.remove('text-gray-400', 'hover:text-white');
                 }
@@ -501,23 +600,25 @@
         function initAppLogic() {
             displayStatus('Application initialized and ready for Firebase/Cloudinary.', 'info', 3000);
             
-            // Conectar el formulario a la función de subida
+            // Connect the form to the upload function
             document.getElementById('mp3-upload-form').addEventListener('submit', handleUpload);
 
-            // Manejar los clics en los enlaces de navegación (Punto 7)
+            // Handle clicks on navigation links
             const navLinks = document.querySelectorAll('header nav a');
             navLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const sectionId = link.getAttribute('href').substring(1);
+                    const sectionId = link.dataset.section;
                     showSection(sectionId);
                 });
             });
 
-            // Mostrar la página de inicio por defecto
+            // Show the home page by default
             showSection('home');
         }
+        
+        // Start the process: check if authenticated or show login
+        document.addEventListener('DOMContentLoaded', checkAuthentication);
     </script>
 </body>
 </html>
-```eof
