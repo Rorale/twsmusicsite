@@ -28,12 +28,14 @@
 
         // Firebase Initialization and Authentication
         const initFirebase = async () => {
-            if (Object.keys(firebaseConfig).length === 0) {
-                 console.error("Firebase is not configured. Database functionality will not work.");
-                 // Proceed without DB initialization if config is empty
+            // Verificar si la configuración de Firebase está vacía o incompleta
+            if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
+                 console.error("FATAL: La configuración de Firebase (__firebase_config) no está presente o es incompleta.");
+                 // Llama a setupApp con null para que el frontend pueda manejar el error
                  window.setupApp(null, null, crypto.randomUUID(), appId);
                  return;
             }
+            
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -49,13 +51,13 @@
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
-                        // Pass the DB instance to setupApp
+                        // Pasa la instancia de DB a setupApp al completarse la autenticación
                         window.setupApp(db, auth, userId, appId); 
                     } else {
+                        // En caso de cierre de sesión, sigue usando un ID temporal
                         userId = crypto.randomUUID(); 
                         isAuthReady = true;
-                        // Pass the DB instance to setupApp
-                        window.setupApp(db, auth, userId, appId);
+                        window.setupApp(null, null, userId, appId);
                     }
                 });
 
@@ -63,6 +65,7 @@
                 console.error("Error initializing or authenticating Firebase:", error);
                 userId = crypto.randomUUID(); 
                 isAuthReady = true;
+                // En caso de error, pasa null para indicar el fallo de la DB
                 window.setupApp(null, null, userId, appId);
             }
         };
@@ -169,8 +172,8 @@
 
                     <!-- Upload Button: DISABLED BY DEFAULT -->
                     <button type="submit" id="upload-button" disabled
-                            class="w-full py-3 rounded-lg bg-blue-600 text-white font-bold transition duration-200 shadow-md opacity-50 cursor-not-allowed">
-                        Connecting to Database...
+                            class="w-full py-3 rounded-lg bg-blue-900 text-white font-bold transition duration-200 shadow-md opacity-50 cursor-not-allowed">
+                        Awaiting Authentication...
                     </button>
                 </form>
 
@@ -240,11 +243,10 @@
 
         // --- AUTHENTICATION & URL CLEANUP LOGIC ---
         
-        // Function to clean the URL bar, removing any query parameters or hash tags
+        // Función para limpiar la barra de URL. Envuelto en try...catch para evitar SecurityError en entornos blob:
         function cleanUrl() {
             try {
                 // Intenta limpiar la URL eliminando fragmentos (hashes) y asegurando el path base.
-                // Esta operación puede fallar con un SecurityError si la página se carga desde un blob: URL.
                 history.replaceState(null, '', window.location.pathname + window.location.search);
             } catch (e) {
                 // Ignorar SecurityError ya que es común en entornos seguros (como iframe con blob: URL).
@@ -270,6 +272,7 @@
                 
                 sessionStorage.setItem('tws_music_authenticated', 'true'); 
                 
+                // FIX: Inicializar Firebase SÓLO después de la autenticación exitosa
                 window.initFirebase(); 
                 
             } else {
@@ -286,10 +289,12 @@
             if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
+                // Si ya está autenticado, inicializa Firebase de inmediato
                 window.initFirebase(); 
             } else {
+                // Si no está autenticado, espera el evento de inicio de sesión antes de inicializar Firebase
                 document.getElementById('login-form').addEventListener('submit', handleLogin);
-                window.initFirebase(); 
+                displayStatus('Please log in to access the system.', 'info', 0);
             }
         }
         // --- END AUTHENTICATION & URL CLEANUP LOGIC ---
@@ -300,25 +305,34 @@
             userId = uid;
             appId = app_id;
             
-            // ----------------------------------------------------------------
-            // CRITICAL FIX: Only enable the upload button when DB is ready
-            // ----------------------------------------------------------------
             const uploadButton = document.getElementById('upload-button');
+            
             if (dbInstance) {
+                // Conexión a DB exitosa
                 uploadButton.disabled = false;
-                uploadButton.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-blue-900', 'text-blue-300');
+                uploadButton.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-blue-900');
                 uploadButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
                 uploadButton.textContent = 'Upload';
                 displayStatus('Database connection established. You can now upload files.', 'success', 3000);
             } else {
-                uploadButton.textContent = 'DB Failed. Check Console.';
-                displayStatus('FATAL: Database instance is NULL after setup.', 'error', 0);
+                // Conexión a DB fallida (Configuración faltante/inválida o error de autenticación)
+                uploadButton.disabled = true;
+                uploadButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                uploadButton.classList.add('bg-red-900', 'opacity-70', 'cursor-not-allowed');
+                // Título del botón más claro sobre la falta de configuración
+                uploadButton.textContent = 'DB Configuration MISSING';
+                
+                const dbStatusMessage = document.getElementById('status-message');
+                // Mensaje de error más específico para el usuario
+                dbStatusMessage.textContent = 'FATAL: Database Error. Check if __firebase_config is correctly set in the environment. Uploads are disabled.';
+                dbStatusMessage.classList.remove('hidden');
+                dbStatusMessage.className = 'mt-4 p-3 rounded-lg text-center text-sm font-bold border bg-red-900 text-red-300 border-red-700';
+                
+                console.error("FIREBASE ERROR: The database instance is NULL. This usually means __firebase_config is missing in the environment.");
             }
             
-            // Only initialize the application logic if authenticated
-            if (sessionStorage.getItem('tws_music_authenticated') === 'true') {
-                 initAppLogic();
-            }
+            // Inicializa la lógica de la aplicación (navegación, listeners, etc.)
+            initAppLogic();
         };
 
         function displayStatus(message, type = 'info', duration = 5000) { 
@@ -426,7 +440,7 @@
         // Firestore Listener Logic 
         function setupMusicListener() {
             if (!dbInstance) {
-                document.getElementById('list-status').textContent = 'Error: Database not available. Please refresh the page.';
+                document.getElementById('list-status').textContent = 'Error: Database not available. Music links list is disabled.';
                 displayStatus('DB Error: Database not available to listen for changes.', 'error');
                 return;
             }
@@ -434,46 +448,48 @@
             const musicListContainer = document.getElementById('music-list');
             const collectionRef = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
             
-            // IMPORTANT: Firestore query uses 'desc' (newest first)
-            const musicQuery = query(collectionRef, orderBy('createdAt', 'desc'));
-            
-            // This function handles real-time list updates
-            const unsubscribe = onSnapshot(musicQuery, (snapshot) => {
-                const songs = [];
+            // Consulta de Firestore (ordenar por descendente de forma predeterminada, ordenar en cliente después de la búsqueda)
+            // Se asume que el índice por 'createdAt' existe. Si no existe, se ordena en cliente.
+            let songs = [];
+            const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+                songs = [];
+                const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.sharedUrl) {
+                    const customName = (data.customName || '').toLowerCase();
+                    
+                    // Filtrado de búsqueda
+                    if (data.sharedUrl && (searchTerm === '' || customName.includes(searchTerm))) {
                         songs.push({ id: doc.id, ...data });
                     }
                 });
 
-                musicListContainer.innerHTML = '';
                 document.getElementById('song-count').textContent = `Total: ${songs.length} songs`;
 
                 if (songs.length === 0) {
-                    musicListContainer.innerHTML = '<p class="text-center text-gray-500">No songs have been uploaded yet.</p>';
+                    musicListContainer.innerHTML = `<p class="text-center text-gray-500">${searchTerm ? 'No songs match your search.' : 'No songs have been uploaded yet.'}</p>`;
                     return;
                 }
                 
-                // --- Manual Sorting Logic (Since orderBy is restricted) ---
-                // We keep orderBy('createdAt', 'desc') in the query for safety, but sort here:
-                let currentSongs = songs;
+                // --- Lógica de ordenación manual ---
                 const sortType = document.querySelector('input[name="sort"]:checked').value;
                 
                 if (sortType === 'alpha') {
-                    currentSongs.sort((a, b) => (a.customName || '').localeCompare(b.customName || ''));
+                    songs.sort((a, b) => (a.customName || '').localeCompare(b.customName || ''));
                 } else if (sortType === 'oldest') {
-                    // Sort by timestamp (asc)
-                    currentSongs.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+                    // Ordenar por timestamp (asc)
+                    songs.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
                 } else if (sortType === 'newest') {
-                    // Sort by timestamp (desc) - This is the default from the query, but we ensure it
-                    currentSongs.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                    // Ordenar por timestamp (desc)
+                    songs.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
                 }
 
-                currentSongs.forEach(song => {
+                musicListContainer.innerHTML = ''; // Limpiar lista
+                songs.forEach(song => {
                     musicListContainer.appendChild(renderMusicItem(song));
                 });
-                // --- End Manual Sorting ---
+                // --- Fin Ordenación ---
 
                 setupCopyButtons();
                 displayStatus(`${songs.length} songs list updated.`, 'info', 2000);
@@ -488,7 +504,6 @@
         
         // Function to save the link to Firestore
         async function saveLinkToFirestore(customName, sharedUrl) {
-            // FIX: The check already happens here, but it should be prevented earlier
             if (!dbInstance) {
                  displayStatus('Error: Database is not ready to save.', 'error');
                  return false;
@@ -516,7 +531,7 @@
             
             // Final safety check, though button should be disabled if not ready
             if (!dbInstance) {
-                 displayStatus('Error: Database is not ready to save. Please wait for the connection or refresh.', 'error');
+                 displayStatus('Error: Database is not ready. Uploads are disabled.', 'error');
                  return;
             }
 
@@ -607,6 +622,7 @@
                     document.body.appendChild(textarea);
                     textarea.select();
                     try {
+                        // Usar document.execCommand('copy') por restricciones de iframe
                         document.execCommand('copy');
                         displayStatus('Link copied to clipboard: ' + urlToCopy.substring(0, 50) + '...', 'success', 3000);
                     } catch (err) {
@@ -626,12 +642,10 @@
                 document.getElementById('home').classList.remove('hidden');
             } else if (id === 'music-links') {
                 document.getElementById('music-links').classList.remove('hidden');
-                // When entering Music Links, ensure the listener is active
+                // Al ingresar a Music Links, asegura que el listener esté activo
                 if (dbInstance) { setupMusicListener(); }
             }
             
-            // IMPORTANT: Keep the URL static
-            // La limpieza de la URL ya se envuelve en try...catch en cleanUrl()
             cleanUrl();
 
             // Update the active class in the navigation
@@ -647,12 +661,10 @@
         };
 
         function initAppLogic() {
-            // displayStatus('Application initialized and ready for Firebase/Cloudinary.', 'info', 3000);
-            
-            // Connect the form to the upload function
+            // Conectar el formulario a la función de subida
             document.getElementById('mp3-upload-form').addEventListener('submit', handleUpload);
 
-            // Handle clicks on navigation links
+            // Manejar clics en enlaces de navegación
             const navLinks = document.querySelectorAll('header nav a');
             navLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
@@ -662,17 +674,16 @@
                 });
             });
 
-            // Handle sort/search changes
+            // Manejar cambios de ordenación/búsqueda
             const sortingInputs = document.querySelectorAll('input[name="sort"], #search-input');
             sortingInputs.forEach(input => {
-                // Attach listener to re-run setupMusicListener which handles sorting/filtering internally
                 input.addEventListener('change', () => {
                     if (document.getElementById('music-links').classList.contains('hidden') === false) {
                         setupMusicListener();
                     }
                 });
                 if (input.id === 'search-input') {
-                    // Use input event for real-time search filtering
+                    // Usar evento 'input' para un filtrado en tiempo real
                      input.addEventListener('input', () => {
                         if (document.getElementById('music-links').classList.contains('hidden') === false) {
                             setupMusicListener();
@@ -681,11 +692,11 @@
                 }
             });
 
-            // Show the home page by default
+            // Mostrar la página de inicio por defecto
             showSection('home');
         }
         
-        // Start the process: check if authenticated or show login
+        // Iniciar el proceso: comprueba si está autenticado o muestra el login
         document.addEventListener('DOMContentLoaded', checkAuthentication);
     </script>
 </body>
