@@ -6,89 +6,6 @@
     <title>TWS Music Host Site</title>
     <!-- Carga de Tailwind CSS para el estilo -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carga de Firebase SDK para la base de datos (Firestore) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Importación de funciones necesarias de Firestore
-        import { getFirestore, addDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        
-        // --- Firebase Configuration and Global Variables ---
-        setLogLevel('Debug');
-        
-        // ====================================================================
-        // !!! ATENCIÓN: CONFIGURACIÓN DE FIREBASE PARA SITIOS ESTÁTICOS !!!
-        // ====================================================================
-        // ESTA CONFIGURACIÓN HA SIDO COMPLETADA CON TUS CREDENCIALES
-        // ====================================================================
-        const FIREBASE_SETTINGS = {
-            // App ID único para la colección de Firestore. Usa un nombre único y fijo.
-            appId: "tws-music-host-v1", 
-            
-            // Configuración de Firebase (OBTENIDA DEL PASO 4)
-            config: {
-                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ", 
-                authDomain: "music-host-site.firebaseapp.com", 
-                projectId: "music-host-site", 
-                storageBucket: "music-host-site.firebasestorage.app", 
-                messagingSenderId: "761480568190",
-                appId: "1:761480568190:web:0b9ff1adbe1843c86f672f"
-            }
-        };
-
-        // Exportar las funciones de utilidad de Firestore al ámbito global
-        window.dbHelpers = { collection, addDoc, onSnapshot, serverTimestamp };
-        
-        let db;
-        let auth;
-        let userId = 'loading';
-        let isAuthReady = false;
-
-        // Firebase Initialization and Authentication
-        const initFirebase = async () => {
-            const { appId: configAppId, config: firebaseConfig } = FIREBASE_SETTINGS;
-
-            // 1. Verificación de configuración
-            if (firebaseConfig.apiKey === "TUS_API_KEY_AQUÍ" || !firebaseConfig.apiKey) {
-                 console.error("FATAL: La configuración de Firebase NO se ha actualizado. Las operaciones de DB están deshabilitadas.");
-                 window.setupApp(null, null, crypto.randomUUID(), configAppId, true);
-                 return;
-            }
-            
-            try {
-                // 2. Inicialización
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // 3. Autenticación (se usa autenticación anónima)
-                await signInAnonymously(auth);
-
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        // Pasa la instancia de DB a setupApp al completarse la autenticación
-                        window.setupApp(db, auth, userId, configAppId, false); 
-                    } else {
-                        userId = crypto.randomUUID(); 
-                        isAuthReady = true;
-                        window.setupApp(null, null, userId, configAppId, true);
-                    }
-                });
-
-            } catch (error) {
-                console.error("Error initializing or authenticating Firebase:", error);
-                userId = crypto.randomUUID(); 
-                isAuthReady = true;
-                // En caso de error, pasa null y marca como falla
-                window.setupApp(null, null, userId, configAppId, true);
-            }
-        };
-
-        window.initFirebase = initFirebase;
-    </script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -114,6 +31,96 @@
 </head>
 <body class="min-h-screen flex flex-col" onload="checkAuthentication()">
 
+    <!-- Carga de Firebase SDK para la base de datos (Firestore) -->
+    <script type="module">
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Importación de funciones necesarias de Firestore
+        import { getFirestore, addDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- CONFIGURACIÓN DE FIREBASE ---
+        setLogLevel('Debug');
+        
+        // ====================================================================
+        // !!! ATENCIÓN: CONFIGURACIÓN DE FIREBASE PARA SITIOS ESTÁTICOS !!!
+        // ====================================================================
+        // ESTA CONFIGURACIÓN HA SIDO COMPLETADA CON TUS CREDENCIALES
+        // ====================================================================
+        const FIREBASE_SETTINGS = {
+            // App ID único para la colección de Firestore. Usa un nombre único y fijo.
+            appId: "tws-music-host-v1", 
+            
+            // Configuración de Firebase (OBTENIDA DE TU CONSOLA)
+            config: {
+                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ", 
+                authDomain: "music-host-site.firebaseapp.com", 
+                projectId: "music-host-site", 
+                storageBucket: "music-host-site.firebasestorage.app", 
+                messagingSenderId: "761480568190",
+                appId: "1:761480568190:web:0b9ff1adbe1843c86f672f"
+            }
+        };
+
+        // Exportar las funciones de utilidad de Firestore al ámbito global
+        window.dbHelpers = { collection, addDoc, onSnapshot, serverTimestamp };
+        
+        let db;
+        let auth;
+        let userId = 'loading';
+        let isAuthReady = false;
+
+        // Firebase Initialization and Authentication
+        const initFirebase = async () => {
+            const { appId: configAppId, config: firebaseConfig } = FIREBASE_SETTINGS;
+
+            // 1. Verificación de configuración
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ")) {
+                 // **NOTA IMPORTANTE:** Estamos asumiendo que tu clave es CORRECTA, pero si la ves en el código,
+                 // el problema no es la clave en sí, sino el error de conexión.
+                 // Si por alguna razón la inicialización falla, se marcará como tal.
+                 if (firebaseConfig.apiKey === "TUS_API_KEY_AQUÍ") {
+                     console.error("FATAL: La configuración de Firebase NO se ha actualizado. Las operaciones de DB están deshabilitadas.");
+                     window.setupApp(null, null, crypto.randomUUID(), configAppId, true);
+                     return;
+                 }
+            }
+            
+            try {
+                // 2. Inicialización
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // 3. Autenticación (se usa autenticación anónima)
+                await signInAnonymously(auth);
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        // Pasa la instancia de DB a setupApp al completarse la autenticación
+                        window.setupApp(db, auth, userId, configAppId, false); 
+                    } else {
+                        userId = crypto.randomUUID(); 
+                        isAuthReady = true;
+                        window.setupApp(null, null, userId, configAppId, true);
+                    }
+                });
+
+            } catch (error) {
+                // Si la configuración es incorrecta, fallará aquí con 'auth/configuration-not-found'
+                console.error("Error initializing or authenticating Firebase:", error);
+                userId = crypto.randomUUID(); 
+                isAuthReady = true;
+                // En caso de error, pasa null y marca como falla
+                window.setupApp(null, null, userId, configAppId, true);
+            }
+        };
+
+        window.initFirebase = initFirebase;
+        // La lógica de la aplicación se inicializa después del DOMContentLoaded
+    </script>
+    
     <!-- 1. LOGIN SCREEN - Visible by default -->
     <section id="login-screen" class="min-h-screen flex items-center justify-center p-6">
         <div class="container-card w-full max-w-sm p-8 rounded-xl text-center">
@@ -290,6 +297,7 @@
                 sessionStorage.setItem('tws_music_authenticated', 'true'); 
                 
                 // Inicializar Firebase SÓLO después de la autenticación exitosa
+                // La función initFirebase ya fue definida en el script type="module" y puesta en window
                 window.initFirebase(); 
                 
             } else {
@@ -307,7 +315,12 @@
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app-content').classList.remove('hidden');
                 // Si ya está autenticado, inicializa Firebase de inmediato
-                window.initFirebase(); 
+                if (window.initFirebase) {
+                    window.initFirebase(); 
+                } else {
+                    displayStatus('FATAL: Firebase init function is not available. Check module script loading.', 'error', 0);
+                }
+
             } else {
                 // Si no está autenticado, espera el evento de inicio de sesión antes de inicializar Firebase
                 document.getElementById('login-form').addEventListener('submit', handleLogin);
@@ -345,12 +358,14 @@
                 
                 let errorMsg = `FATAL: Database Error. Uploads and listing are disabled.`;
                 
-                if (FIREBASE_SETTINGS.config.apiKey === "TUS_API_KEY_AQUÍ") {
-                    uploadButton.textContent = 'DB Configuration REQUIRED';
-                    errorMsg = `FATAL: Database configuration is missing. Please update FIREBASE_SETTINGS in the JavaScript block to enable DB functionality.`;
+                // Si dbInstance es nulo y la clave fue correctamente insertada (revisando la variable global)
+                if (FIREBASE_SETTINGS.config.apiKey.includes("AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ")) {
+                    uploadButton.textContent = 'DB Connection Failed: Check Console';
+                    errorMsg = `FATAL: Database connection failed. Check your Firebase credentials and rules in the console. App ID: ${appId}`;
                 } else {
-                    uploadButton.textContent = 'DB Connection Failed';
-                    errorMsg = `FATAL: Database connection failed. Check your Firebase credentials and rules. App ID: ${appId}`;
+                    // Este caso solo debería ocurrir si no se ha actualizado la clave o hay un error de carga
+                    uploadButton.textContent = 'DB Configuration MISSING';
+                    errorMsg = `FATAL: Database configuration is missing. Please update FIREBASE_SETTINGS in the JavaScript block.`;
                 }
 
                 const dbStatusMessage = document.getElementById('status-message');
