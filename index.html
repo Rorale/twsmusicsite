@@ -578,18 +578,30 @@
             }
         }
 
+        // Función para re-habilitar el botón de subida a su estado normal
+        function enableUploadButton(uploadButton) {
+            uploadButton.disabled = false;
+            uploadButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            // Re-añade la clase hover para el efecto visual
+            uploadButton.classList.add('hover:bg-blue-700');
+        }
+
         // Cloudinary Upload Logic
         async function handleUpload(e) {
             e.preventDefault();
             
+            const uploadButton = document.getElementById('upload-button');
+
             // Final safety check, though button should be disabled if not ready
             if (!dbInstance) {
                  displayStatus('Error: Database is not ready. Uploads are disabled.', 'error');
+                 enableUploadButton(uploadButton); // Asegura que se habilite
                  return;
             }
 
             if (CLOUDINARY_CLOUD_NAME === "" || CLOUDINARY_UPLOAD_PRESET === "") {
                  displayStatus('ERROR: Cloudinary configuration is incomplete. Check constants.', 'error');
+                 enableUploadButton(uploadButton); // Asegura que se habilite
                  return;
             }
             
@@ -597,26 +609,30 @@
             const customNameInput = document.getElementById('custom-name');
             const file = fileInput.files[0];
             const customName = customNameInput.value.trim();
-            const uploadButton = document.getElementById('upload-button');
             
             if (!file) {
                 displayStatus('Validation: Please select an MP3 file.', 'error');
+                enableUploadButton(uploadButton); // Asegura que se habilite
                 return;
             }
             if (!customName) {
                  displayStatus('Validation: Please enter a custom name.', 'error');
+                 enableUploadButton(uploadButton); // Asegura que se habilite
                  return;
             }
             
             if (file.size > MAX_FILE_SIZE) {
                  displayStatus(`Error: File is too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)} MB.`, 'error');
+                 enableUploadButton(uploadButton); // Asegura que se habilite
                  return;
             }
             if (!file.type.startsWith('audio/')) {
                  displayStatus('Error: Only audio files are allowed.', 'error');
+                 enableUploadButton(uploadButton); // Asegura que se habilite
                  return;
             }
 
+            // Deshabilitar botón de subida
             displayStatus('Uploading file, please wait...', 'loading');
             uploadButton.disabled = true;
             uploadButton.classList.add('opacity-50', 'cursor-not-allowed');
@@ -627,6 +643,7 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                // Creación de public_id seguro usando el nombre y el timestamp
                 formData.append('public_id', `music/${customName.replace(/[^a-z0-9]/gi, '_')}-${Date.now()}`); 
                 formData.append('resource_type', 'auto'); 
                 
@@ -659,9 +676,8 @@
                 displayStatus(`Network or Connection Error: ${error.message}`, 'error');
                 console.error("Upload error:", error);
             } finally {
-                uploadButton.disabled = false;
-                uploadButton.classList.remove('opacity-50', 'cursor-not-allowed');
-                uploadButton.classList.add('hover:bg-blue-700');
+                // *** FIX: Asegurar que el botón se rehabilita al finalizar el try/catch ***
+                enableUploadButton(uploadButton);
             }
         }
         
