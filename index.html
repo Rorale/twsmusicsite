@@ -154,15 +154,11 @@
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIGURACIÓN DE CLOUDINARY (REQUERIDO) ---
-        // DEBES ASEGURARTE DE QUE ESTOS VALORES SEAN CORRECTOS PARA TU CUENTA DE CLOUDINARY.
+        // --- CONFIGURACIÓN DE CLOUDINARY (IMPORTANTE) ---
+        // ESTOS VALORES FUERON PROPORCIONADOS POR EL USUARIO Y DEBEN RESOLVER EL ERROR 401.
         const CLOUDINARY_CONFIG = {
-            // "tws_music_uploads" según tu configuración de Cloudinary
-            cloudName: "tws_music_uploads", 
-            // Usamos el nombre de la carpeta 'music' como preset, asumiendo que es el preset sin firmar asociado.
-            // Si el nombre del preset es diferente, debe ser cambiado aquí.
-            uploadPreset: "music", 
-            // Carpeta para organizar tus archivos de audio en Cloudinary
+            cloudName: "daj3jaqd9",
+            uploadPreset: "tws_music_uploads",
             folder: "music" 
         };
         // --- FIN CONFIGURACIÓN CLOUDINARY ---
@@ -252,7 +248,8 @@
             
             const songName = customName || file.name.split('.').slice(0, -1).join('.');
 
-            uploadButton.textContent = "Uploading (Cloudinary)...";
+            // Corregido: Mostrar solo "Uploading..."
+            uploadButton.textContent = "Uploading..."; 
             uploadButton.disabled = true;
 
             try {
@@ -264,7 +261,8 @@
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(`Cloudinary Upload Failed: ${errorData.error.message}`);
+                    // Importante: Lanzar un error claro si la subida falla (ej: 401 Unauthorized)
+                    throw new Error(`Cloudinary Upload Failed: ${errorData.error ? errorData.error.message : response.statusText}. Por favor, verifica tu Cloud Name y Upload Preset.`);
                 }
 
                 const data = await response.json();
@@ -287,8 +285,10 @@
 
             } catch (error) {
                 console.error("Upload Error:", error);
+                // Asegurar que el botón se reactive en caso de error (Solución al "congelamiento")
                 displayStatus(`Error durante la subida o registro: ${error.message || error}`, 'bg-red-600');
             } finally {
+                // Asegurar que el botón se reactive
                 uploadButton.textContent = "Upload";
                 uploadButton.disabled = false;
             }
