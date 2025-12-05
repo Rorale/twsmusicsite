@@ -184,7 +184,7 @@
 
             <!-- Detalle de Carpeta -->
             <div id="folder-detail-view" class="hidden mt-8 p-6 card w-full">
-                <!-- CORRECCIÓN: Se añade ID y se elimina onclick, el listener se añade en el script del módulo. -->
+                <!-- CORREGIDO: Botón con ID y listener en el módulo para evitar ReferenceError -->
                 <button id="back-to-folders-btn" class="text-blue-400 hover:text-blue-300 mb-4 font-semibold">&larr; Back to Folders</button>
                 <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
                     <h3 id="folder-detail-name" class="text-3xl font-bold text-yellow-400"></h3>
@@ -268,7 +268,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT ESTÁNDAR PARA FUNCIONES GLOBALES (SOLUCIÓN AL ReferenceError) -->
+    <!-- SCRIPT ESTÁNDAR PARA FUNCIONES GLOBALES -->
     <script>
         // Hacemos que estas funciones sean globales y accesibles desde el atributo onclick="" del HTML.
         function showModal(id) {
@@ -292,22 +292,16 @@
         lucide.createIcons();
 
         // --- FUNCIONES DE UTILIDAD PARA CLOUDINARY ---
-        // Función para limpiar una cadena y hacerla segura para URL/Public ID
-        function slugify(text) {
+        // Función para limpiar una cadena y hacerla segura para URL/Public ID, manteniendo la capitalización.
+        function createSafePublicId(text) {
             return text
-                .toLowerCase()
                 .trim()
-                .replace(/[^a-z0-9\s-]/g, '') // Eliminar caracteres no alfanuméricos (excepto espacios y guiones)
-                .replace(/[\s-]+/g, '_');    // Reemplazar espacios y guiones por guiones bajos (underscores)
+                // Eliminar caracteres problemáticos de Cloudinary/filesystem, pero mantener A-Z y a-z
+                .replace(/[\\/:*?"<>|&#]/g, '') 
+                // Reemplazar espacios, guiones y puntos con guión bajo (underscore)
+                .replace(/[\s\-\.]+/g, '_');    
         }
-
-        // --- CONFIGURACIÓN DE CLOUDINARY (IMPORTANTE) ---
-        const CLOUDINARY_CONFIG = {
-            cloudName: "daj3jaqd9",
-            uploadPreset: "tws_music_uploads",
-            folder: "music" 
-        };
-        // --- FIN CONFIGURACIÓN CLOUDINARY ---
+        // --- FIN FUNCIONES DE UTILIDAD ---
 
         // Configuración Global y Variables
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -317,6 +311,15 @@
         // Variables de Firebase
         let app, db, auth, userId = null;
         let isAuthReady = false;
+
+        // --- CONFIGURACIÓN DE CLOUDINARY (IMPORTANTE) ---
+        // TODO: Asegúrate de reemplazar "daj3jaqd9" y "tws_music_uploads" con tus valores reales.
+        const CLOUDINARY_CONFIG = {
+            cloudName: "daj3jaqd9",
+            uploadPreset: "tws_music_uploads",
+            folder: "music" 
+        };
+        // --- FIN CONFIGURACIÓN CLOUDINARY ---
 
         // --- CONFIGURACIÓN DE FIRESTORE ---
         const SONG_COLLECTION_NAME = 'uploaded_songs_cloudinary'; // Catálogo de canciones
@@ -341,7 +344,7 @@
         const foldersMainContent = document.getElementById('folders-main-content');
         const homeView = document.getElementById('home-view'); 
         const foldersView = document.getElementById('folders-view'); 
-        const backToFoldersBtn = document.getElementById('back-to-folders-btn'); // NUEVO: Referencia al botón
+        const backToFoldersBtn = document.getElementById('back-to-folders-btn'); 
         
         // Estado de la interfaz
         let allSongs = [];
@@ -476,17 +479,17 @@
             const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
             
             const songName = customName || file.name.split('.').slice(0, -1).join('.');
-            const slugifiedName = slugify(songName); // Nombre limpio para el ID público
+            // CORRECCIÓN: Usamos createSafePublicId para mantener la capitalización.
+            const safePublicId = createSafePublicId(songName); 
 
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', uploadPreset);
             formData.append('folder', folder);
             
-            // CRÍTICO: Usar el nombre limpio como public_id si se proporcionó un nombre personalizado.
-            // NO se puede usar 'overwrite' con un upload preset NO firmado.
+            // CRÍTICO: Usar el nombre seguro y con case para el public_id si se proporcionó un nombre personalizado.
             if (customName) {
-                formData.append('public_id', slugifiedName);
+                formData.append('public_id', safePublicId);
             }
             
             uploadButton.textContent = "Uploading..."; 
@@ -515,7 +518,7 @@
                     url: data.secure_url, 
                     uploadedBy: userId,
                     timestamp: new Date(),
-                    cloudinaryId: data.public_id 
+                    cloudinaryId: data.public_id // Almacena el ID público exacto (con case)
                 };
 
                 await addDoc(collection(db, collectionPath), songData);
@@ -1089,7 +1092,7 @@
         document.getElementById('nav-home').addEventListener('click', () => showView('home'));
         document.getElementById('nav-folders').addEventListener('click', () => showView('folders'));
         
-        // CORRECCIÓN DEL ERROR: Listener para el botón "Back to Folders" ahora en el módulo.
+        // Listener para el botón "Back to Folders"
         backToFoldersBtn.addEventListener('click', () => showView('folders'));
 
         document.getElementById('save-nickname-btn').addEventListener('click', () => {
