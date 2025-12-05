@@ -9,22 +9,36 @@
     <!-- Carga de Firebase SDK para la base de datos (Firestore) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         // Importación de funciones necesarias de Firestore
-        import { getFirestore, doc, addDoc, onSnapshot, collection, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, addDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         
         // --- Firebase Configuration and Global Variables ---
         setLogLevel('Debug');
         
-        // Exportar las funciones de utilidad de Firestore al ámbito global para que el script principal pueda usarlas.
+        // ====================================================================
+        // !!! ATENCIÓN: CONFIGURACIÓN DE FIREBASE PARA SITIOS ESTÁTICOS !!!
+        // ====================================================================
+        // ESTA CONFIGURACIÓN HA SIDO COMPLETADA CON TUS CREDENCIALES
+        // ====================================================================
+        const FIREBASE_SETTINGS = {
+            // App ID único para la colección de Firestore. Usa un nombre único y fijo.
+            appId: "tws-music-host-v1", 
+            
+            // Configuración de Firebase (OBTENIDA DEL PASO 4)
+            config: {
+                apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ", 
+                authDomain: "music-host-site.firebaseapp.com", 
+                projectId: "music-host-site", 
+                storageBucket: "music-host-site.firebasestorage.app", 
+                messagingSenderId: "761480568190",
+                appId: "1:761480568190:web:0b9ff1adbe1843c86f672f"
+            }
+        };
+
+        // Exportar las funciones de utilidad de Firestore al ámbito global
         window.dbHelpers = { collection, addDoc, onSnapshot, serverTimestamp };
-        
-        // Global variables (provided by the Canvas environment)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        // FIX: Se corrigió la referencia a la variable global '__initial_auth_token'
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
         
         let db;
         let auth;
@@ -33,36 +47,34 @@
 
         // Firebase Initialization and Authentication
         const initFirebase = async () => {
-            // Verificar si la configuración de Firebase está vacía o incompleta
-            if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
-                 console.error("FATAL: La configuración de Firebase (__firebase_config) no está presente o es incompleta.");
-                 // Llama a setupApp con null para que el frontend pueda manejar el error
-                 window.setupApp(null, null, crypto.randomUUID(), appId);
+            const { appId: configAppId, config: firebaseConfig } = FIREBASE_SETTINGS;
+
+            // 1. Verificación de configuración
+            if (firebaseConfig.apiKey === "TUS_API_KEY_AQUÍ" || !firebaseConfig.apiKey) {
+                 console.error("FATAL: La configuración de Firebase NO se ha actualizado. Las operaciones de DB están deshabilitadas.");
+                 window.setupApp(null, null, crypto.randomUUID(), configAppId, true);
                  return;
             }
             
             try {
+                // 2. Inicialización
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // 3. Autenticación (se usa autenticación anónima)
+                await signInAnonymously(auth);
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
                         // Pasa la instancia de DB a setupApp al completarse la autenticación
-                        window.setupApp(db, auth, userId, appId); 
+                        window.setupApp(db, auth, userId, configAppId, false); 
                     } else {
-                        // En caso de cierre de sesión, sigue usando un ID temporal
                         userId = crypto.randomUUID(); 
                         isAuthReady = true;
-                        window.setupApp(null, null, userId, appId);
+                        window.setupApp(null, null, userId, configAppId, true);
                     }
                 });
 
@@ -70,8 +82,8 @@
                 console.error("Error initializing or authenticating Firebase:", error);
                 userId = crypto.randomUUID(); 
                 isAuthReady = true;
-                // En caso de error, pasa null para indicar el fallo de la DB
-                window.setupApp(null, null, userId, appId);
+                // En caso de error, pasa null y marca como falla
+                window.setupApp(null, null, userId, configAppId, true);
             }
         };
 
@@ -142,17 +154,17 @@
             <div class="container-card w-full max-w-md p-8 rounded-xl">
                 <h2 class="text-2xl font-semibold mb-6 text-center text-white">Upload your MP3s here</h2>
                 
-                <!-- (3) User ID Displayed for debugging - AHORA SIEMPRE OCULTO -->
+                <!-- User ID Displayed for debugging - AHORA SIEMPRE OCULTO -->
                 <p id="user-info" class="text-xs text-center text-gray-500 mb-4 hidden">
                     User ID: Loading...
                 </p>
                 
-                <!-- (9) Upload Note Corrected: Bold and in English -->
+                <!-- Upload Note Corrected: Bold and in English -->
                 <p class="text-sm text-center text-red-400 mb-6 font-bold">
                     Note: Max. file size upload is 40MB. The use of this site is intended for RP purposes only.
                 </p>
 
-                <!-- Upload Form - Password Field REMOVED -->
+                <!-- Upload Form -->
                 <form id="mp3-upload-form" class="space-y-6">
 
                     <!-- MP3 File Selection -->
@@ -177,15 +189,15 @@
 
                     <!-- Upload Button: DISABLED BY DEFAULT -->
                     <button type="submit" id="upload-button" disabled
-                            class="w-full py-3 rounded-lg bg-blue-900 text-white font-bold transition duration-200 shadow-md opacity-50 cursor-not-allowed">
-                        Awaiting Authentication...
+                            class="w-full py-3 rounded-lg bg-red-900 text-white font-bold transition duration-200 shadow-md opacity-70 cursor-not-allowed">
+                        DB Configuration REQUIRED
                     </button>
                 </form>
 
                 <!-- Temporary Status Message Area -->
                 <div id="status-message" class="mt-4 text-center text-sm font-medium hidden"></div>
 
-                <!-- (5) Hidden Activity Log (Internal Log) -->
+                <!-- Hidden Activity Log (Internal Log) -->
                 <div class="mt-6 pt-4 border-t border-[#30363d] hidden">
                     <h3 class="text-sm font-semibold mb-2 text-gray-400">Activity/Error Log</h3>
                     <div id="activity-log" class="max-h-40 overflow-y-auto space-y-1 p-2 rounded-lg bg-[#21262d] text-xs flex flex-col-reverse">
@@ -277,7 +289,7 @@
                 
                 sessionStorage.setItem('tws_music_authenticated', 'true'); 
                 
-                // FIX: Inicializar Firebase SÓLO después de la autenticación exitosa
+                // Inicializar Firebase SÓLO después de la autenticación exitosa
                 window.initFirebase(); 
                 
             } else {
@@ -305,7 +317,7 @@
         // --- END AUTHENTICATION & URL CLEANUP LOGIC ---
 
         // NEW: This function is called once Firebase Auth is resolved and DB instance is available
-        window.setupApp = (db, auth, uid, app_id) => {
+        window.setupApp = (db, auth, uid, app_id, isFailed) => {
             dbInstance = db;
             userId = uid;
             appId = app_id;
@@ -313,33 +325,40 @@
             const uploadButton = document.getElementById('upload-button');
             const userInfo = document.getElementById('user-info'); // Referencia al elemento de ID de usuario
             
-            if (dbInstance) {
+            // La línea para mostrar el ID de usuario permanece oculta a petición del usuario.
+            userInfo.textContent = `User ID: ${userId}`;
+
+            if (dbInstance && !isFailed) {
                 // Conexión a DB exitosa
                 uploadButton.disabled = false;
-                uploadButton.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-blue-900');
+                uploadButton.classList.remove('opacity-70', 'cursor-not-allowed', 'bg-red-900');
                 uploadButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
                 uploadButton.textContent = 'Upload';
                 displayStatus('Database connection established. You can now upload files.', 'success', 3000);
+                setupMusicListener();
 
-                // La línea obligatoria para mostrar el ID de usuario se ha eliminado/comentado a petición del usuario.
-                // Se mantiene el contenido actualizado por si se habilita el modo de depuración.
-                userInfo.textContent = `User ID: ${userId}`;
-                // userInfo.classList.remove('hidden'); // REMOVIDO: A petición del usuario.
             } else {
                 // Conexión a DB fallida (Configuración faltante/inválida o error de autenticación)
                 uploadButton.disabled = true;
                 uploadButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
                 uploadButton.classList.add('bg-red-900', 'opacity-70', 'cursor-not-allowed');
-                // Título del botón más claro sobre la falta de configuración
-                uploadButton.textContent = 'DB Configuration MISSING';
                 
+                let errorMsg = `FATAL: Database Error. Uploads and listing are disabled.`;
+                
+                if (FIREBASE_SETTINGS.config.apiKey === "TUS_API_KEY_AQUÍ") {
+                    uploadButton.textContent = 'DB Configuration REQUIRED';
+                    errorMsg = `FATAL: Database configuration is missing. Please update FIREBASE_SETTINGS in the JavaScript block to enable DB functionality.`;
+                } else {
+                    uploadButton.textContent = 'DB Connection Failed';
+                    errorMsg = `FATAL: Database connection failed. Check your Firebase credentials and rules. App ID: ${appId}`;
+                }
+
                 const dbStatusMessage = document.getElementById('status-message');
-                // Mensaje de error más específico para el usuario
-                dbStatusMessage.textContent = `FATAL: Database Error. Check if __firebase_config is correctly set in the environment. App ID used: ${appId}. Uploads are disabled.`;
+                dbStatusMessage.textContent = errorMsg;
                 dbStatusMessage.classList.remove('hidden');
                 dbStatusMessage.className = 'mt-4 p-3 rounded-lg text-center text-sm font-bold border bg-red-900 text-red-300 border-red-700';
                 
-                console.error("FIREBASE ERROR: The database instance is NULL. This usually means __firebase_config is missing in the environment.");
+                console.error(`FIREBASE ERROR: Database instance is NULL. Reason: ${errorMsg}`);
             }
             
             // Inicializa la lógica de la aplicación (navegación, listeners, etc.)
@@ -451,8 +470,8 @@
         // Firestore Listener Logic 
         function setupMusicListener() {
             if (!dbInstance) {
-                document.getElementById('list-status').textContent = 'Error: Database not available. Music links list is disabled.';
-                displayStatus('DB Error: Database not available to listen for changes.', 'error');
+                // Ya manejado por setupApp, solo muestra el estado en la pestaña
+                document.getElementById('list-status').textContent = 'Error: Database is not configured or available. Cannot fetch music links.';
                 return;
             }
             
@@ -460,6 +479,7 @@
             const { collection, onSnapshot } = window.dbHelpers;
             
             const musicListContainer = document.getElementById('music-list');
+            // Usamos el appId definido en FIREBASE_SETTINGS
             const collectionRef = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
             
             // Consulta de Firestore (ordenar por descendente de forma predeterminada, ordenar en cliente después de la búsqueda)
@@ -526,6 +546,7 @@
             const { collection, addDoc, serverTimestamp } = window.dbHelpers;
             
             try {
+                // Usamos el appId definido en FIREBASE_SETTINGS
                 const path = collection(dbInstance, 'artifacts', appId, PUBLIC_MUSIC_COLLECTION_PATH);
                 await addDoc(path, {
                     customName: customName,
@@ -660,7 +681,12 @@
             } else if (id === 'music-links') {
                 document.getElementById('music-links').classList.remove('hidden');
                 // Al ingresar a Music Links, asegura que el listener esté activo
-                if (dbInstance) { setupMusicListener(); }
+                // Esto también gestiona el caso de que la DB esté desactivada
+                if (dbInstance) {
+                    setupMusicListener(); 
+                } else {
+                    document.getElementById('list-status').textContent = 'Error: Database is not configured or available. Cannot fetch music links.';
+                }
             }
             
             cleanUrl();
