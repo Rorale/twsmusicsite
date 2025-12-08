@@ -631,9 +631,10 @@
                     <button class="add-to-folder-btn py-2 px-4 rounded-lg text-white font-semibold btn-secondary transition" data-id="${song.id}" data-name="${name}">
                         Add to Folder
                     </button>
-                    <button class="copy-btn py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" data-url="${externalLink}">
-                        Copy Link
-                    </button>
+                    <button class="copy-btn py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition"
+        data-short-name="${song.shortName || ''}">
+    Copy Link
+</button>
                     ${song.uploadedBy === userId ? 
                         `<button class="delete-btn py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" data-id="${song.id}" data-cloudinary-id="${song.cloudinaryId}">
                             Delete
@@ -643,10 +644,20 @@
             `;
 
             div.querySelector('.copy-btn').addEventListener('click', (e) => {
-                const url = e.currentTarget.getAttribute('data-url');
-                copyToClipboard(url);
-            });
-            
+    const shortName = e.currentTarget.getAttribute('data-short-name');
+
+    if (!shortName) {
+        // Canciones antiguas sin shortName: usa la URL directa de Cloudinary como respaldo
+        const fallbackUrl = song.url;
+        copyToClipboard(fallbackUrl);
+        displayStatus('No short link available for this song. Copied direct URL instead.', 'bg-yellow-600');
+        return;
+    }
+
+    const shortUrl = `https://thatwarserver.music.site/music/${shortName}`;
+    copyToClipboard(shortUrl);
+    displayStatus('Short link copied to clipboard.', 'bg-green-600');
+});    
             div.querySelector('.add-to-folder-btn').addEventListener('click', (e) => {
                 songToAddMetadata = {
                     id: e.currentTarget.getAttribute('data-id'),
