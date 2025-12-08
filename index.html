@@ -1,3 +1,5 @@
+INDEX RAIZ BASE
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -294,13 +296,15 @@
         // --- FUNCIONES DE UTILIDAD PARA CLOUDINARY ---
         // Función para limpiar una cadena y hacerla segura para URL/Public ID, manteniendo la capitalización.
         function createSafePublicId(text) {
-            return text
-                .trim()
-                // Eliminar caracteres problemáticos de Cloudinary/filesystem, pero mantener A-Z y a-z
-                .replace(/[\\/:*?"<>|&#]/g, '') 
-                // Reemplazar espacios, guiones y puntos con guión bajo (underscore)
-                .replace(/[\s\-\.]+/g, '_');    
-        }
+  return text
+    .trim()
+    // Eliminar caracteres problemáticos, pero NO cambiar mayúsculas/minúsculas
+    .replace(/[\\/:*?"<>|&#]/g, '')
+    // Reemplazar espacios, guiones y puntos con guión bajo
+    .replace(/[\\s\\-\\.]+/g, '_');
+}
+
+
         // --- FIN FUNCIONES DE UTILIDAD ---
 
         // Configuración Global y Variables
