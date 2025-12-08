@@ -24,11 +24,6 @@
       text-align: center;
       border: 1px solid #4b5563;
     }
-    .title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-    }
     .text {
       font-size: 0.9rem;
       color: #9ca3af;
@@ -61,7 +56,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // MISMA CONFIGURACIÓN QUE EN TU index.html
     const firebaseConfig = {
       apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ",
       authDomain: "music-host-site.firebaseapp.com",
@@ -76,17 +70,15 @@
     const db = getFirestore(app);
 
     const SONG_COLLECTION_NAME = "uploaded_songs_cloudinary";
-    const appId = "default-app-id"; // el mismo default que en tu index.html
+    const appId = "default-app-id"; // mismo valor que en tu index.html
 
     const statusEl = document.getElementById("status");
     const manualBtn = document.getElementById("manual-download");
 
-    // 1. OBTENER EL NOMBRE CORTO DESDE LA URL
     function getShortNameFromUrl() {
-      // Esperado: /music/Space  → shortName = "Space"
       const path = window.location.pathname || "";
-      const parts = path.split("/").filter(Boolean); // elimina vacíos
-      // parts podría ser ["twsmusicsite","music","Space"] o ["music","Space"]
+      const parts = path.split("/").filter(Boolean);
+      // Puede ser ["twsmusicsite","music","Space"] o ["music","Space"]
       const indexOfMusic = parts.lastIndexOf("music");
       if (indexOfMusic === -1 || indexOfMusic === parts.length - 1) {
         return null;
@@ -126,7 +118,6 @@
 
         statusEl.textContent = `Starting download for "${data.name || shortName}"...`;
 
-        // 2. FORZAR DESCARGA AUTOMÁTICA
         const a = document.createElement("a");
         a.href = fileUrl;
         a.download = (data.name || shortName) + ".mp3";
@@ -134,7 +125,6 @@
         a.click();
         document.body.removeChild(a);
 
-        // Mostrar botón de descarga manual como respaldo
         manualBtn.style.display = "inline-block";
         manualBtn.onclick = () => {
           window.location.href = fileUrl;
