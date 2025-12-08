@@ -1,3 +1,7 @@
+MUSIC INDEX
+
+getShortNameFromUrl()
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,15 +80,19 @@
     const manualBtn = document.getElementById("manual-download");
 
     function getShortNameFromUrl() {
-      const path = window.location.pathname || "";
-      const parts = path.split("/").filter(Boolean);
-      // Puede ser ["twsmusicsite","music","Space"] o ["music","Space"]
-      const indexOfMusic = parts.lastIndexOf("music");
-      if (indexOfMusic === -1 || indexOfMusic === parts.length - 1) {
-        return null;
-      }
-      return parts[indexOfMusic + 1];
-    }
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("s");
+  if (fromQuery) return fromQuery;
+
+  // respaldo: último segmento de la ruta, por si algún día usas /music/Snow
+  const path = window.location.pathname || "";
+  const parts = path.split("/").filter(Boolean);
+  const indexOfMusic = parts.lastIndexOf("music");
+  if (indexOfMusic === -1 || indexOfMusic === parts.length - 1) {
+    return null;
+  }
+  return parts[indexOfMusic + 1];
+}
 
     async function loadAndDownload() {
       const shortName = getShortNameFromUrl();
