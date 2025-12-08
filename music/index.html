@@ -70,7 +70,7 @@
     const db = getFirestore(app);
 
     const SONG_COLLECTION_NAME = "uploaded_songs_cloudinary";
-    const appId = "default-app-id"; // mismo valor que en tu index.html
+    const appId = "default-app-id";
 
     const statusEl = document.getElementById("status");
     const manualBtn = document.getElementById("manual-download");
@@ -119,6 +119,9 @@
           return;
         }
 
+        // URL limpia sin la parte /v12345/
+        const cleanUrl = fileUrl.replace(/\/v[0-9]+\//, '/');
+
         statusEl.textContent = `Ready: "${data.name || shortName}"`;
 
         const card = document.querySelector('.card');
@@ -127,13 +130,12 @@
         audio.controls = true;
         audio.style.marginTop = '12px';
         audio.style.width = '100%';
-        audio.src = fileUrl;
-
+        audio.src = cleanUrl;
         card.appendChild(audio);
 
         manualBtn.style.display = "inline-block";
         manualBtn.onclick = () => {
-          window.open(fileUrl, "_blank");
+          window.open(cleanUrl, "_blank");
         };
 
       } catch (error) {
