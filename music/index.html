@@ -1,7 +1,3 @@
-MUSIC INDEX
-
-getShortNameFromUrl()
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,19 +76,18 @@ getShortNameFromUrl()
     const manualBtn = document.getElementById("manual-download");
 
     function getShortNameFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const fromQuery = params.get("s");
-  if (fromQuery) return fromQuery;
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get("s");
+      if (fromQuery) return fromQuery;
 
-  // respaldo: último segmento de la ruta, por si algún día usas /music/Snow
-  const path = window.location.pathname || "";
-  const parts = path.split("/").filter(Boolean);
-  const indexOfMusic = parts.lastIndexOf("music");
-  if (indexOfMusic === -1 || indexOfMusic === parts.length - 1) {
-    return null;
-  }
-  return parts[indexOfMusic + 1];
-}
+      const path = window.location.pathname || "";
+      const parts = path.split("/").filter(Boolean);
+      const indexOfMusic = parts.lastIndexOf("music");
+      if (indexOfMusic === -1 || indexOfMusic === parts.length - 1) {
+        return null;
+      }
+      return parts[indexOfMusic + 1];
+    }
 
     async function loadAndDownload() {
       const shortName = getShortNameFromUrl();
@@ -124,18 +119,21 @@ getShortNameFromUrl()
           return;
         }
 
-        statusEl.textContent = `Starting download for "${data.name || shortName}"...`;
+        statusEl.textContent = `Ready: "${data.name || shortName}"`;
 
-        const a = document.createElement("a");
-        a.href = fileUrl;
-        a.download = (data.name || shortName) + ".mp3";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const card = document.querySelector('.card');
+
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.style.marginTop = '12px';
+        audio.style.width = '100%';
+        audio.src = fileUrl;
+
+        card.appendChild(audio);
 
         manualBtn.style.display = "inline-block";
         manualBtn.onclick = () => {
-          window.location.href = fileUrl;
+          window.open(fileUrl, "_blank");
         };
 
       } catch (error) {
