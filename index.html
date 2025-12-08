@@ -513,13 +513,15 @@
                 const collectionPath = `artifacts/${appId}/public/data/${SONG_COLLECTION_NAME}`;
                 
                 const songData = {
-                    name: songName, // Nombre de visualización
-                    fileName: file.name,
-                    url: data.secure_url, 
-                    uploadedBy: userId,
-                    timestamp: new Date(),
-                    cloudinaryId: data.public_id // Almacena el ID público exacto (con case)
-                };
+    name: songName,            // Nombre que se muestra en la lista
+    fileName: file.name,
+    url: data.secure_url,      // URL real de Cloudinary
+    uploadedBy: userId,
+    timestamp: new Date(),
+    cloudinaryId: data.public_id, // ID público exacto en Cloudinary
+    shortName: safePublicId       // Nombre corto para /music/Space
+};
+
 
                 await addDoc(collection(db, collectionPath), songData);
                 
