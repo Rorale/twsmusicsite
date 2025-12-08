@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TWS Music Download</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: #111827;
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background-color: #1f2937;
+      padding: 24px;
+      border-radius: 12px;
+      max-width: 420px;
+      width: 90%;
+      text-align: center;
+      border: 1px solid #4b5563;
+    }
+    .title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    .text {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-bottom: 0.75rem;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.6rem 1.4rem;
+      background-color: #3b82f6;
+      color: white;
+      border-radius: 9999px;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="status" class="text">Preparing download...</div>
+    <button id="manual-download" class="btn" style="display:none;">Download now</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // MISMA CONFIGURACIÓN QUE EN TU index.html
+    const firebaseConfig = {
+      apiKey: "AIzaSyBipp_qEAamELRQJDGz7wWb6LUDyj7-cRQ",
+      authDomain: "music-host-site.firebaseapp.com",
+      projectId: "music-host-site",
+      storageBucket: "music-host-site.firebasestorage.app",
+      messagingSenderId: "761480568190",
+      appId: "1:761480568190:web:0b9ff1adbe1843c86f672f",
+      measurementId: "G-B15CZRFHK5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const SONG_COLLECTION_NAME = "uploaded_songs_cloudinary";
+    const appId = "default-app-id"; // el mismo default que en tu index.html
+
+    const statusEl = document.getElementById("status");
+    const manualBtn = document.getElementById("manual-download");
+
+    // 1. OBTENER EL NOMBRE CORTO DESDE LA URL
+    function getShortNameFromUrl() {
+      // Esperado: /music/Space  → shortName = "Space"
+      const path = window.location.pathname || "";
+      const parts = path.split("/").filter(Boolean); // elimina vacíos
+      // parts podría ser ["twsmusicsite","music","Space"] o ["music","Space"]
+      const indexOfMusic = parts.lastIndexOf("music");
+      if (indexOfMusic === -1 || indexOfMusic === parts.length - 1) {
+        return null;
+      }
+      return parts[indexOfMusic + 1];
+    }
+
+    async function loadAndDownload() {
+      const shortName = getShortNameFromUrl();
+
+      if (!shortName) {
+        statusEl.textContent = "Invalid download link (no song name found).";
+        return;
+      }
+
+      statusEl.textContent = `Looking for "${shortName}"...`;
+
+      try {
+        const collectionPath = `artifacts/${appId}/public/data/${SONG_COLLECTION_NAME}`;
+        const songsRef = collection(db, collectionPath);
+        const q = query(songsRef, where("shortName", "==", shortName));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          statusEl.textContent = `No song found for "${shortName}".`;
+          return;
+        }
+
+        const songDoc = snapshot.docs[0];
+        const data = songDoc.data();
+        const fileUrl = data.url;
+
+        if (!fileUrl) {
+          statusEl.textContent = "Song found but no file URL is stored.";
+          return;
+        }
+
+        statusEl.textContent = `Starting download for "${data.name || shortName}"...`;
+
+        // 2. FORZAR DESCARGA AUTOMÁTICA
+        const a = document.createElement("a");
+        a.href = fileUrl;
+        a.download = (data.name || shortName) + ".mp3";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Mostrar botón de descarga manual como respaldo
+        manualBtn.style.display = "inline-block";
+        manualBtn.onclick = () => {
+          window.location.href = fileUrl;
+        };
+
+      } catch (error) {
+        console.error("Error fetching song by shortName:", error);
+        statusEl.textContent = "Error while preparing the download. Please try again later.";
+      }
+    }
+
+    loadAndDownload();
+  </script>
+</body>
+</html>
