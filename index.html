@@ -1,3 +1,5 @@
+INDEX RAIZ BASE
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -648,18 +650,17 @@
     const shortName = e.currentTarget.getAttribute('data-short-name');
 
     if (!shortName) {
-        // Canciones antiguas sin shortName: usa la URL directa de Cloudinary
         const fallbackUrl = song.url;
         copyToClipboard(fallbackUrl);
         displayStatus('No short link available for this song. Copied direct URL instead.', 'bg-yellow-600');
         return;
     }
 
-        const shortUrl = `https://rorale.github.io/twsmusicsite/music/${shortName}`;
-
+    const shortUrl = `https://rorale.github.io/twsmusicsite/music/?s=${encodeURIComponent(shortName)}`;
     copyToClipboard(shortUrl);
     displayStatus('Short link copied to clipboard.', 'bg-green-600');
 });
+
 
             
             div.querySelector('.add-to-folder-btn').addEventListener('click', (e) => {
