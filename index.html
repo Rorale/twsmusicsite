@@ -1,5 +1,3 @@
-INDEX RAIZ BASE
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -649,19 +647,12 @@ INDEX RAIZ BASE
             `;
 
             div.querySelector('.copy-btn').addEventListener('click', (e) => {
-    const shortName = e.currentTarget.getAttribute('data-short-name');
-
-    if (!shortName) {
-        const fallbackUrl = song.url;
-        copyToClipboard(fallbackUrl);
-        displayStatus('No short link available for this song. Copied direct URL instead.', 'bg-yellow-600');
-        return;
-    }
-
-    const shortUrl = `https://rorale.github.io/twsmusicsite/music/?s=${encodeURIComponent(shortName)}`;
-    copyToClipboard(shortUrl);
-    displayStatus('Short link copied to clipboard.', 'bg-green-600');
+    const fileUrl = song.url;
+    const cleanUrl = fileUrl.replace(/\/v[0-9]+\//, '/');
+    copyToClipboard(cleanUrl);
+    displayStatus('Direct link copied to clipboard.', 'bg-green-600');
 });
+
 
 
             
