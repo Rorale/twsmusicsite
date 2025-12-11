@@ -928,46 +928,52 @@ if (deleteBtn && !deleteBtn.disabled) {
 }   // ✔️ ESTA LLAVE CIERRA CORRECTAMENTE renderFolderDetail
 
 // ✔️ Y AQUÍ YA VIENE LA FUNCIÓN QUE DEBE ESTAR AFUERA:
+// --- FUNCIÓN CORRECTA SIN MEZCLA NI ERRORES ---
 function createFolderSongElement(song, index, folderOwnerNickname) {
-    const row = document.createElement("div");
-    row.className = "grid grid-cols-12 gap-2 items-center p-2 pl-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 rounded-md shadow-sm transition-transform duration-150 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer";
-    row.setAttribute("draggable", "true");
-    row.dataset.songId = song.id;
+    const div = document.createElement("div");
+    div.className =
+        "folder-song-item grid grid-cols-12 gap-2 items-center p-2 pl-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 rounded-md shadow-sm transition-transform duration-150 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer";
+    div.setAttribute("draggable", "true");
+    div.dataset.songId = song.songId;
 
+    div.innerHTML = `
+        <div class="flex items-center space-x-3 w-full col-span-10">
+            <span class="text-xl font-bold text-gray-400 w-8 text-right">${index}.</span>
+            <div class="flex-grow">
+                <p class="font-medium text-lg">${song.songName}</p>
+                <audio controls class="mt-1 w-full" style="height: 35px;">
+                    <source src="${song.url}" type="audio/mp3">
+                </audio>
+            </div>
+        </div>
 
+        ${
+            folderOwnerNickname === (userProfiles[userId] || "")
+                ? `
+            <button class="remove-from-folder-btn col-span-2 p-2 rounded-full text-white bg-red-700 hover:bg-red-600 transition ml-3"
+                    data-song-id="${song.songId}">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>`
+                : ""
+        }
+    `;
 
-            div.innerHTML = `
-                <div class="flex items-center space-x-3 w-full">
-                    <span class="text-xl font-bold text-gray-400 w-8 text-right">${index}.</span>
-                    <div class="flex-grow">
-                        <p class="font-medium text-lg">${song.songName}</p>
-                        <audio controls class="mt-1 w-full" style="height: 35px;">
-                            <source src="${song.url}" type="audio/mp3">
-                        </audio>
-                    </div>
-                </div>
-                ${folderOwnerNickname === currentUserNickname ? 
-    `<button class="remove-from-folder-btn p-2 rounded-full text-white bg-red-700 hover:bg-red-600 transition ml-3" data-song-id="${song.songId}">
-        <i data-lucide="x" class="w-4 h-4"></i>
-    </button>` 
-    : ''
+    // Activamos iconos
+    lucide.createIcons();
+
+    // Botón eliminar (solo si existe)
+    const removeBtn = div.querySelector(".remove-from-folder-btn");
+    if (removeBtn) {
+        removeBtn.addEventListener("click", () => {
+            if (confirm("¿Estás seguro de que quieres quitar esta canción de la carpeta?")) {
+                removeSongFromFolder(currentFolderId, song.songId);
+            }
+        });
+    }
+
+    return div;
 }
 
-            `;
-            lucide.createIcons();
-            
-            const removeBtn = div.querySelector('.remove-from-folder-btn');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', () => {
-                    // Nota: Aquí se usa confirm() temporalmente
-                    if (confirm("¿Estás seguro de que quieres quitar esta canción de la carpeta?")) {
-                        removeSongFromFolder(currentFolderId, song.songId);
-                    }
-                });
-            }
-
-            return div;
-        }
 
         let draggedItem = null;
 
