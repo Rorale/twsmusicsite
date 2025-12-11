@@ -910,9 +910,9 @@ if (deleteBtn && !deleteBtn.disabled) {
             }
             
             songsInFolder.forEach((song, index) => {
-                cconst songElement = createFolderSongElement(song, index + 1, folder.ownerNickname);
-                listElement.appendChild(songElement);
-            });
+    const songElement = createFolderSongElement(song, index + 1, folder.ownerNickname);
+    listElement.appendChild(songElement);
+});
             
             setupDragAndDrop(listElement);
             saveOrderBtn.disabled = true;
