@@ -918,20 +918,22 @@ if (deleteBtn && !deleteBtn.disabled) {
             saveOrderBtn.disabled = true;
 
             const currentUserNickname = userProfiles[userId];
-if (folder.ownerNickname !== currentUserNickname) {
-    saveOrderBtn.disabled = true;
-    listElement.classList.add('pointer-events-none', 'opacity-75');
-    displayStatus('Only the owner can manage this folder.', 'bg-yellow-600', document.getElementById('folder-detail-view'));
-    return;
-}
+    if (folder.ownerNickname !== currentUserNickname) {
+        saveOrderBtn.disabled = true;
+        listElement.classList.add('pointer-events-none', 'opacity-75');
+        displayStatus('Only the owner can manage this folder.', 'bg-yellow-600', document.getElementById('folder-detail-view'));
+        return;
+    }
 
-        function createFolderSongElement(song, index, folderOwnerNickname) {
-    const div = document.createElement('div');
-    div.className = 'folder-song-item p-3 flex justify-between items-center bg-gray-600 border border-gray-500 cursor-move';
-    
-    const currentUserNickname = userProfiles[userId];
-    div.setAttribute('draggable', folderOwnerNickname === currentUserNickname);
-    div.setAttribute('data-song-id', song.songId);
+}   // ✔️ ESTA LLAVE CIERRA CORRECTAMENTE renderFolderDetail
+
+// ✔️ Y AQUÍ YA VIENE LA FUNCIÓN QUE DEBE ESTAR AFUERA:
+function createFolderSongElement(song, index, folderOwnerNickname) {
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-12 gap-2 items-center p-2 pl-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 rounded-md shadow-sm transition-transform duration-150 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer";
+    row.setAttribute("draggable", "true");
+    row.dataset.songId = song.id;
+
 
 
             div.innerHTML = `
