@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TWS Music Host Site - Upload & Share</title>
-    <!-- Carga de Tailwind CSS para el estilizado -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Iconos Lucide (para engranaje de ajustes y carpetas) -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script> 
     <style>
         /* Paleta de colores Oscura */
@@ -71,31 +69,27 @@
 </head>
 <body class="min-h-screen p-4">
 
-    <!-- Navbar -->
     <header class="flex justify-between items-center py-4 border-b border-gray-600 mb-6">
-        <h1 class="text-3xl font-extrabold text-gray-100">TWS Music Host Site</h1>
+        <h1 class="text-3xl font-extrabold text-gray-100">
+            <span class="text-blue-500">T</span><span class="text-yellow-500">W</span><span class="text-red-500">S</span> Music Host Site
+        </h1>
         <nav class="flex items-center space-x-2">
             <div class="flex space-x-2">
                 <span id="nav-home" class="nav-link active font-medium" data-view="home">Home & Upload</span>
                 <span id="nav-folders" class="nav-link font-medium" data-view="folders">Folders</span>
             </div>
-            <!-- Botón de ajustes llama a la función global showModal -->
             <button id="settings-btn" class="p-2 rounded-full hover:bg-gray-700 transition" onclick="showModal('settingsModal')">
                  <i data-lucide="settings" class="w-5 h-5 text-gray-400"></i>
             </button>
         </nav>
     </header>
 
-    <!-- Contenedor Principal de Vistas -->
     <div id="main-content-container">
 
-        <!-- VISTA 1: HOME & UPLOAD (Contiene la carga y la lista principal) -->
         <div id="home-view" class="lg:flex lg:space-x-8">
-            <!-- Columna de Carga (Upload) -->
             <div id="upload-card" class="w-full lg:w-1/2 p-6 card mb-8 lg:mb-0">
                 <h2 class="text-2xl font-bold mb-6 text-center text-gray-100">Upload your MP3s here</h2>
 
-                <!-- Mensaje de error/éxito -->
                 <div id="upload-status" class="hidden p-3 rounded-lg text-sm mb-4 font-semibold" role="alert"></div>
 
                 <form id="uploadForm" class="space-y-6">
@@ -103,31 +97,26 @@
                         Note: Max. file size upload is 40MB. The use of this site is intended for RP purposes only.
                     </p>
 
-                    <!-- Campo de archivo -->
                     <div>
                         <label for="mp3File" class="block text-sm font-medium mb-1 text-gray-300">Choose MP3 File</label>
                         <input type="file" id="mp3File" accept="audio/mp3" required class="input-style p-3 w-full rounded-lg cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-800 file:text-blue-200 hover:file:bg-blue-700">
                     </div>
 
-                    <!-- Campo de nombre personalizado -->
                     <div>
                         <label for="customName" class="block text-sm font-medium mb-1 text-gray-300">Custom Name (Used for URL)</label>
                         <input type="text" id="customName" placeholder="Ex: Airship (will be airship.mp3 in URL)" class="input-style p-3 w-full rounded-lg">
                     </div>
                     
-                    <!-- Botón de Carga/Estado DB -->
                     <button type="submit" id="uploadButton" class="w-full py-3 rounded-lg font-bold text-lg btn-danger" disabled>
                         DB Configuration MISSING
                     </button>
 
-                    <!-- Mensaje de inicio de sesión (Oculto al usuario final) -->
                     <div id="login-status-message" class="text-center text-sm text-gray-400 py-2 rounded-md">
                         Please log in to access the system.
                     </div>
                 </form>
             </div>
 
-            <!-- Columna de Enlaces de Música (Music Links) -->
             <div id="links-card" class="w-full lg:w-1/2 p-6 card">
                 <h2 class="text-2xl font-bold mb-6 text-center text-gray-100">Uploaded Music Links</h2>
                 
@@ -136,20 +125,17 @@
                     <p class="text-blue-400 mt-2">Cargando canciones...</p>
                 </div>
 
-                <!-- Contador de canciones -->
                 <p class="text-right text-gray-400 mb-4">Total: <span id="song-count" class="font-bold">0</span> songs</p>
 
-                <!-- Filtros y Búsqueda -->
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0 sm:space-x-4">
                     <input type="text" id="search-input" placeholder="Search song by name..." class="input-style p-3 rounded-lg w-full sm:w-2/3">
                     <div class="flex space-x-2 text-sm text-gray-300 font-medium">
-                        <label><input type="radio" name="sort" value="alpha" class="text-blue-400"> Alphabetical</label>
-                        <label><input type="radio" name="sort" value="newest" checked class="text-blue-400"> Newest</label>
+                        <label><input type="radio" name="sort" value="alpha" checked class="text-blue-400"> Alphabetical</label>
+                        <label><input type="radio" name="sort" value="newest" class="text-blue-400"> Newest</label>
                         <label><input type="radio" name="sort" value="oldest" class="text-blue-400"> Oldest</label>
                     </div>
                 </div>
 
-                <!-- Lista de Canciones -->
                 <div id="music-list" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                     <div id="no-songs-message" class="text-center text-gray-500 mt-10 hidden">
                         No hay canciones subidas todavía. ¡Sube la primera!
@@ -158,12 +144,10 @@
             </div>
         </div>
 
-        <!-- VISTA 2: FOLDERS -->
         <div id="folders-view" class="hidden p-6 card">
             <div id="folders-main-content">
                 <div class="flex justify-between items-center mb-6 border-b border-gray-600 pb-4">
                     <h2 class="text-2xl font-bold text-gray-100">User Folders (Playlists)</h2>
-                    <!-- Botón llama a la función global showModal -->
                     <button class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" onclick="showModal('createFolderModal')">
                         <i data-lucide="folder-plus" class="w-5 h-5 inline mr-1"></i> Create New Folder
                     </button>
@@ -174,7 +158,6 @@
                     <p class="text-blue-400 mt-2">Cargando carpetas...</p>
                 </div>
                 
-                <!-- Lista de Carpetas -->
                 <div id="folders-list" class="space-y-4 min-h-[400px]">
                     <div id="no-folders-message" class="text-center text-gray-500 mt-10">
                         No hay carpetas creadas. Sé el primero en crear una.
@@ -182,9 +165,7 @@
                 </div>
             </div>
 
-            <!-- Detalle de Carpeta -->
             <div id="folder-detail-view" class="hidden mt-8 p-6 card w-full">
-                <!-- CORREGIDO: Botón con ID y listener en el módulo para evitar ReferenceError -->
                 <button id="back-to-folders-btn" class="text-blue-400 hover:text-blue-300 mb-4 font-semibold">&larr; Back to Folders</button>
                 <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
                     <h3 id="folder-detail-name" class="text-3xl font-bold text-yellow-400"></h3>
@@ -194,8 +175,7 @@
                 <p class="text-gray-400 mb-4">Drag and drop songs below to reorder your playlist.</p>
                 
                 <div id="folder-songs-list" class="space-y-3">
-                    <!-- Canciones se inyectan aquí -->
-                </div>
+                    </div>
 
                 <div class="mt-6 flex justify-end">
                     <button id="save-order-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition" disabled>
@@ -206,16 +186,13 @@
         </div>
     </div>
     
-    <!-- Footer -->
     <footer class="mt-8 pt-4 text-center text-sm text-gray-400 border-t border-gray-600">
         &copy; 2025 made by Rorale. All rights reserved.
     </footer>
 
-    <!-- MODAL: Settings / Nickname -->
     <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
         <div class="bg-gray-700 p-6 rounded-lg shadow-xl w-full max-w-sm">
             <h3 class="text-xl font-bold mb-4">Settings</h3>
-            <!-- AÑADIDO: Advertencia de Permisos de DB -->
             <p class="text-sm text-yellow-300 mb-4">
                 ⚠️ **Permisos de DB:** Si no puedes guardar, verifica que tus Reglas de Seguridad de Firestore permitan *lectura y escritura* en las colecciones públicas.
             </p>
@@ -225,14 +202,12 @@
             <input type="text" id="nickname-input" class="input-style p-2 w-full mb-4" placeholder="Enter your desired nickname">
             
             <div class="flex justify-end space-x-2">
-                <!-- CORREGIDO: Botón "Close" ahora llama a la función global hideModal -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('settingsModal')">Close</button>
                 <button id="save-nickname-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition">Save Nickname</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL: Create Folder -->
     <div id="createFolderModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
         <div class="bg-gray-700 p-6 rounded-lg shadow-xl w-full max-w-sm">
             <h3 class="text-xl font-bold mb-4">Create New Folder</h3>
@@ -242,14 +217,12 @@
             <input type="text" id="folder-name-input" class="input-style p-2 w-full mb-4" placeholder="Ex: Best of RPGs OST">
             
             <div class="flex justify-end space-x-2">
-                <!-- CORREGIDO: Botón "Cancel" ahora llama a la función global hideModal -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('createFolderModal')">Cancel</button>
                 <button id="create-folder-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-green-600 hover:bg-green-700 transition">Create Folder</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL: Add Song to Folder -->
     <div id="addSongModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50">
         <div class="bg-gray-700 p-6 rounded-lg shadow-xl w-full max-w-md">
             <h3 class="text-xl font-bold mb-4">Add "<span id="song-to-add-name" class="text-yellow-400"></span>" to Folder</h3>
@@ -261,14 +234,12 @@
             </select>
             
             <div class="flex justify-end space-x-2">
-                <!-- CORREGIDO: Botón "Cancel" ahora llama a la función global hideModal -->
                 <button class="py-2 px-4 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition" onclick="hideModal('addSongModal')">Cancel</button>
                 <button id="confirm-add-song-btn" class="py-2 px-4 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition" disabled>Add Song</button>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT ESTÁNDAR PARA FUNCIONES GLOBALES -->
     <script>
         // Hacemos que estas funciones sean globales y accesibles desde el atributo onclick="" del HTML.
         function showModal(id) {
@@ -281,7 +252,6 @@
     </script>
 
 
-    <!-- Bibliotecas de Firebase y Storage -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
